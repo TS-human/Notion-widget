@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notion Fitness Multi-Timer Widget</title>
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #37352f;
+      --card-bg: #f7f6f3;
+      --accent-color: #ff5722;
+      --border-color: #e9e9e7;
+      --sub-text: #787774;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #191919;
+        --text-color: rgba(255, 255, 255, 0.81);
+        --card-bg: #202020;
+        --accent-color: #ff7043;
+        --border-color: #2f2f2f;
+        --sub-text: #9b9b9b;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .widget-container {
+      width: 100%;
+      max-width: 340px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      position: relative;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+      overflow: hidden;
+    }
+
+    .widget-container.stage-prep {
+      background-color: #dcfce7;
+      border-color: #86efac;
+    }
+    .widget-container.stage-work {
+      background-color: #ffedd5;
+      border-color: #fdba74;
+    }
+    .widget-container.stage-rest {
+      background-color: #dbeafe;
+      border-color: #93c5fd;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .widget-container.stage-prep {
+        background-color: #064e3b;
+        border-color: #047857;
+      }
+      .widget-container.stage-work {
+        background-color: #7c2d12;
+        border-color: #c2410c;
+      }
+      .widget-container.stage-rest {
+        background-color: #1e3a8a;
+        border-color: #1d4ed8;
+      }
+    }
+
+    @keyframes flash-anim {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .flash {
+      animation: flash-anim 0.4s ease-in-out 3;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: rgba(0,0,0,0.06);
+      padding: 3px;
+      border-radius: 8px;
+      flex-grow: 1;
+      margin-right: 8px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 5px 0;
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--bg-color);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      opacity: 0.75;
+      display: inline-flex;
+      align-items: center;
+    }
+    .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+
+    .interval-info-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 2px;
+      height: 16px;
+    }
+    .sets-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-color);
+      opacity: 0.8;
+    }
+
+    .display {
+      font-size: 46px;
+      font-weight: 700;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      margin: 4px 0 10px;
+      letter-spacing: -1px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+      padding: 2px 0;
+    }
+    .display:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .display-input {
+      font-size: 42px;
+      font-weight: 700;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      margin: 4px 0 10px;
+      letter-spacing: -1px;
+      width: 100%;
+      border: 2px solid var(--accent-color);
+      border-radius: 8px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .slider-container { margin-bottom: 10px; }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--sub-text);
+      margin-bottom: 4px;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-color);
+      cursor: pointer;
+    }
+    
+    .preset-section-title {
+      font-size: 10px;
+      color: var(--sub-text);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .preset-btn {
+      padding: 6px 0;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .preset-btn:hover {
+      background: rgba(0,0,0,0.05);
+      border-color: var(--accent-color);
+    }
+
+    .controls { display: flex; gap: 8px; }
+    .main-btn {
+      flex: 2;
+      padding: 8px;
+      border: none;
+      background: var(--accent-color);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .sub-btn {
+      flex: 1;
+      padding: 1px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .edit-modal-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 20;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+    .edit-modal-overlay.active { display: flex; }
+    .edit-modal-card {
+      width: 100%;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .modal-field {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .modal-field label {
+      font-size: 10px;
+      color: var(--sub-text);
+      font-weight: 600;
+    }
+    .modal-field input {
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      box-sizing: border-box;
+      outline: none;
+    }
+    .modal-field input:focus { border-color: var(--accent-color); }
+
+    .settings-panel {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 14px;
+      box-sizing: border-box;
+      z-index: 30;
+      overflow-y: auto;
+    }
+    .settings-panel.active { display: block; }
+    .settings-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-group { margin-bottom: 12px; }
+    .setting-label {
+      font-size: 11px;
+      color: var(--sub-text);
+      margin-bottom: 4px;
+      display: block;
+      font-weight: 600;
+    }
+    select, input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 11px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; height: 52px; }
+
+    .audio-settings-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 10px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+    .sound-item {
+      margin-bottom: 8px;
+    }
+    .sound-file-input {
+      font-size: 11px;
+      width: 100%;
+      color: var(--sub-text);
+    }
+    .sound-status {
+      font-size: 9px;
+      color: var(--sub-text);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shortcuts-hint {
+      font-size: 10px;
+      color: var(--sub-text);
+      border-top: 1px dashed var(--border-color);
+      padding-top: 8px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="widget-container" id="widget-container">
+  <div class="header-bar">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-timer" onclick="switchMode('timer')">タイマー</button>
+      <button class="tab-btn" id="tab-stopwatch" onclick="switchMode('stopwatch')">ストップウォッチ</button>
+      <button class="tab-btn" id="tab-interval" onclick="switchMode('interval')">インターバル</button>
+    </div>
+    <button class="icon-btn" onclick="toggleSettings()" title="設定">⚙️</button>
+  </div>
+
+  <div id="interval-info-bar" class="interval-info-bar hidden">
+    <span class="sets-badge" id="interval-sets-badge">1 / 8</span>
+  </div>
+
+  <div class="display" id="time-display" onclick="handleDisplayClick()">05:00</div>
+  <input class="display-input hidden" id="time-display-input" type="text" onkeydown="handleDisplayInputKey(event)" onblur="saveDisplayEdit()">
+
+  <div class="slider-container" id="slider-group">
+    <div class="slider-header">
+      <span>スライダー調整</span>
+    </div>
+    <input type="range" id="time-slider" min="1" max="60" value="5" oninput="onSliderChange(this.value)">
+  </div>
+
+  <div id="timer-presets-section">
+    <div class="preset-section-title">タイマー テンプレート</div>
+    <div class="preset-grid" id="presets-group"></div>
+  </div>
+
+  <div id="interval-presets-section" class="hidden">
+    <div class="preset-section-title">インターバル テンプレート</div>
+    <div class="preset-grid" id="interval-presets-group"></div>
+  </div>
+
+  <div class="controls">
+    <button class="main-btn" id="start-btn" onclick="toggleStart()">スタート</button>
+    <button class="sub-btn" id="reset-btn" onclick="resetTimer()">リセット</button>
+  </div>
+
+  <!-- インターバル設定モーダル -->
+  <div class="edit-modal-overlay" id="edit-modal-overlay">
+    <div class="edit-modal-card">
+      <div class="modal-header">
+        <span>インターバル設定</span>
+        <button class="icon-btn" onclick="closeEditModal()">✖</button>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>準備時間</label>
+          <input type="text" id="modal-prep-input" placeholder="0:05">
+        </div>
+        <div class="modal-field">
+          <label>運動時間</label>
+          <input type="text" id="modal-work-input" placeholder="0:20">
+        </div>
+        <div class="modal-field">
+          <label>休憩時間</label>
+          <input type="text" id="modal-rest-input" placeholder="0:10">
+        </div>
+        <div class="modal-field">
+          <label>セット数</label>
+          <input type="number" id="modal-sets-input" min="1" max="99" value="8">
+        </div>
+      </div>
+
+      <button class="main-btn" style="width:100%; margin-top:4px;" onclick="saveModalEdit()">完了</button>
+    </div>
+  </div>
+
+  <!-- 設定カスタマイズパネル -->
+  <div class="settings-panel" id="settings-panel">
+    <div class="settings-title">
+      <span>⚙️ 設定カスタマイズ</span>
+      <button class="icon-btn" onclick="toggleSettings()">✖</button>
+    </div>
+
+    <!-- 1. 音量調整 -->
+    <div class="setting-group">
+      <div class="setting-label" style="display:flex; justify-content:space-between;">
+        <span>🔊 音量</span>
+        <span id="vol-value-text">80%</span>
+      </div>
+      <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="onVolumeChange(this.value)">
+    </div>
+
+    <!-- 2. テンプレート -->
+    <div class="setting-group">
+      <label class="setting-label">タイマー テンプレート (カンマ区切り)</label>
+      <input type="text" id="preset-input" value="0:30, 1:00, 3:00, 5:00, 10:00, 15:00">
+    </div>
+
+    <div class="setting-group">
+      <label class="setting-label">インターバル テンプレート (改行: 名称,準備,運動,休憩,セット数)</label>
+      <textarea id="interval-presets-input" placeholder="タバタ, 0:05, 0:20, 0:10, 8&#10;筋トレ, 0:10, 0:45, 0:15, 4"></textarea>
+    </div>
+
+    <!-- 3. ファイル選択 -->
+    <div class="audio-settings-section">
+      <div class="preset-section-title" style="font-size:11px; margin-bottom:8px; color:var(--text-color);">📁 効果音ファイル選択</div>
+
+      <!-- タイマー終了音 -->
+      <div class="sound-item">
+        <label class="setting-label">タイマー終了音</label>
+        <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-timer" onchange="handleSoundUpload(event, 'timer')">
+        <div class="sound-status" id="sound-status-timer"></div>
+      </div>
+
+      <!-- 3秒カウント音 -->
+      <div class="sound-item">
+        <label class="setting-label">3秒カウント音</label>
+        <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-countdown" onchange="handleSoundUpload(event, 'countdown')">
+        <div class="sound-status" id="sound-status-countdown"></div>
+      </div>
+
+      <!-- 運動開始音 -->
+      <div class="sound-item">
+        <label class="setting-label">運動開始音</label>
+        <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-work" onchange="handleSoundUpload(event, 'work')">
+        <div class="sound-status" id="sound-status-work"></div>
+      </div>
+
+      <!-- 休憩開始音 -->
+      <div class="sound-item">
+        <label class="setting-label">休憩開始音</label>
+        <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-rest" onchange="handleSoundUpload(event, 'rest')">
+        <div class="sound-status" id="sound-status-rest"></div>
+      </div>
+
+      <!-- インターバル完了音 -->
+      <div class="sound-item">
+        <label class="setting-label">インターバル完了音</label>
+        <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-finish" onchange="handleSoundUpload(event, 'finish')">
+        <div class="sound-status" id="sound-status-finish"></div>
+      </div>
+    </div>
+
+    <!-- 4. ショートカットの説明 -->
+    <div class="shortcuts-hint">
+      <strong>⌨️ ショートカット</strong><br>
+      • [Space]: スタート / 一時停止<br>
+      • [R]: リセット
+    </div>
+
+    <button class="main-btn" style="width:100%; margin-top:14px;" onclick="saveSettings()">設定を保存</button>
+  </div>
+</div>
+
+<script>
+  let currentMode = 'timer';
+
+  const modesState = {
+    timer: { time: 300, initialTime: 300, isRunning: false },
+    stopwatch: { time: 0, isRunning: false },
+    interval: {
+      prepSec: 5,
+      workSec: 20,
+      restSec: 10,
+      totalSets: 8,
+      currentSet: 1,
+      stage: 'prep',
+      time: 5,
+      isRunning: false
+    }
+  };
+
+  let config = {
+    volume: 0.8,
+    timerPresets: ["0:30", "1:00", "3:00", "5:00", "10:00", "15:00"],
+    intervalPresets: [
+      { name: 'タバタ', prep: "0:05", work: "0:20", rest: "0:10", sets: 8 },
+      { name: '筋トレ自重', prep: "0:10", work: "0:45", rest: "0:15", sets: 4 },
+      { name: 'セット間休憩', prep: "0:00", work: "0:00", rest: "1:30", sets: 5 }
+    ],
+    sounds: {
+      timer: null,
+      countdown: null,
+      work: null,
+      rest: null,
+      finish: null
+    }
+  };
+
+  function parseTimeToSeconds(input, isInterval = false) {
+    if (typeof input === 'number') return input;
+    const str = String(input).trim();
+    if (!str) return 0;
+
+    if (str.includes('分') || str.includes('秒')) {
+      let m = 0, s = 0;
+      const mMatch = str.match(/(\d+)\s*分/);
+      const sMatch = str.match(/(\d+)\s*秒/);
+      if (mMatch) m = parseInt(mMatch[1], 10);
+      if (sMatch) s = parseInt(sMatch[1], 10);
+      return m * 60 + s;
+    }
+
+    if (str.includes(':')) {
+      const parts = str.split(':');
+      const m = parseInt(parts[0], 10) || 0;
+      const s = parseInt(parts[1], 10) || 0;
+      return m * 60 + s;
+    }
+
+    const num = parseInt(str, 10);
+    if (isNaN(num)) return 0;
+    if (isInterval) return num;
+    return num > 60 ? num : num * 60;
+  }
+
+  function formatPresetLabel(sec) {
+    if (sec < 60) return `${sec}秒`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return s === 0 ? `${m}分` : `${m}分${s}秒`;
+  }
+
+  function triggerFlash() {
+    const el = document.getElementById('widget-container');
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1300);
+  }
+
+  function triggerSound(type) {
+    if (type !== 'countdown') {
+      triggerFlash();
+    }
+
+    if (config.sounds && config.sounds[type] && config.sounds[type].data) {
+      try {
+        const audio = new Audio(config.sounds[type].data);
+        audio.volume = config.volume;
+        audio.play().catch(() => playSynthBeep(type));
+      } catch(e) {
+        playSynthBeep(type);
+      }
+    } else {
+      playSynthBeep(type);
+    }
+  }
+
+  function playSynthBeep(type) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+
+      if (type === 'countdown') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(config.volume * 0.9, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.frequency.setValueAtTime(1200, now);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } else if (type === 'timer') {
+        [0, 0.15, 0.3].forEach((t) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          gain.gain.setValueAtTime(config.volume, now + t);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.1);
+          osc.frequency.setValueAtTime(1500, now + t);
+          osc.start(now + t);
+          osc.stop(now + t + 0.1);
+        });
+      } else if (type === 'work' || type === 'rest') {
+        [0, 0.12].forEach((t) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          gain.gain.setValueAtTime(config.volume, now + t);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.08);
+          osc.frequency.setValueAtTime(type === 'work' ? 1800 : 1300, now + t);
+          osc.start(now + t);
+          osc.stop(now + t + 0.08);
+        });
+      } else if (type === 'finish') {
+        const freqs = [1000, 1300, 1600, 2000];
+        freqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          const startTime = now + idx * 0.09;
+          gain.gain.setValueAtTime(config.volume, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+          osc.frequency.setValueAtTime(freq, startTime);
+          osc.start(startTime);
+          osc.stop(startTime + 0.12);
+        });
+      }
+    } catch(e) {}
+  }
+
+  function handleSoundUpload(e, key) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("容量オーバーです。ファイルサイズは2MB以下にしてください。");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      if (!config.sounds) config.sounds = {};
+      config.sounds[key] = {
+        data: evt.target.result,
+        name: file.name
+      };
+      updateSoundStatusUI(key);
+      saveConfigToStorage();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateSoundStatusUI(key) {
+    const statusEl = document.getElementById(`sound-status-${key}`);
+    if (!statusEl) return;
+    if (config.sounds && config.sounds[key] && config.sounds[key].data) {
+      statusEl.textContent = `📁 ${config.sounds[key].name || '設定済み'}`;
+      statusEl.style.color = 'var(--accent-color)';
+    } else {
+      statusEl.textContent = '';
+      statusEl.style.color = 'var(--sub-text)';
+    }
+  }
+
+  function onVolumeChange(val) {
+    config.volume = parseFloat(val) / 100;
+    document.getElementById('vol-value-text').textContent = `${val}%`;
+  }
+
+  function loadConfig() {
+    try {
+      const saved = localStorage.getItem('notion_fitness_timer_config_v7');
+      if (saved) config = { ...config, ...JSON.parse(saved) };
+    } catch(e) {}
+
+    const volPct = Math.round((config.volume ?? 0.8) * 100);
+    document.getElementById('volume-slider').value = volPct;
+    document.getElementById('vol-value-text').textContent = `${volPct}%`;
+
+    document.getElementById('preset-input').value = (config.timerPresets || []).join(', ');
+    const intervalLines = (config.intervalPresets || []).map(p => `${p.name},${p.prep || '0:05'},${p.work},${p.rest},${p.sets}`).join('\n');
+    document.getElementById('interval-presets-input').value = intervalLines;
+
+    ['timer', 'countdown', 'work', 'rest', 'finish'].forEach(key => updateSoundStatusUI(key));
+
+    renderTimerPresets();
+    renderIntervalPresets();
+  }
+
+  function saveConfigToStorage() {
+    try {
+      localStorage.setItem('notion_fitness_timer_config_v7', JSON.stringify(config));
+    } catch(e) {}
+  }
+
+  function saveSettings() {
+    const pInput = document.getElementById('preset-input').value;
+    config.timerPresets = pInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+    const intervalInput = document.getElementById('interval-presets-input').value;
+    const parsedInterval = [];
+    intervalInput.split('\n').forEach(line => {
+      const parts = line.split(',').map(s => s.trim());
+      if (parts.length >= 5) {
+        parsedInterval.push({
+          name: parts[0] || 'カスタム',
+          prep: parts[1],
+          work: parts[2],
+          rest: parts[3],
+          sets: parseInt(parts[4], 10) || 1
+        });
+      }
+    });
+    if (parsedInterval.length > 0) config.intervalPresets = parsedInterval;
+
+    saveConfigToStorage();
+    renderTimerPresets();
+    renderIntervalPresets();
+    toggleSettings();
+    updateUI();
+  }
+
+  function renderTimerPresets() {
+    const container = document.getElementById('presets-group');
+    container.innerHTML = '';
+    (config.timerPresets || []).forEach(valStr => {
+      const sec = parseTimeToSeconds(valStr);
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.textContent = formatPresetLabel(sec);
+      btn.onclick = () => setPresetSeconds(sec);
+      container.appendChild(btn);
+    });
+  }
+
+  function renderIntervalPresets() {
+    const container = document.getElementById('interval-presets-group');
+    container.innerHTML = '';
+    (config.intervalPresets || []).forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.textContent = p.name;
+      btn.onclick = () => applyIntervalPreset(p);
+      container.appendChild(btn);
+    });
+  }
+
+  function applyIntervalPreset(p) {
+    const st = modesState.interval;
+    st.isRunning = false;
+    st.prepSec = parseTimeToSeconds(p.prep || '0:05', true);
+    st.workSec = parseTimeToSeconds(p.work, true);
+    st.restSec = parseTimeToSeconds(p.rest, true);
+    st.totalSets = p.sets;
+    st.currentSet = 1;
+
+    if (st.prepSec > 0) {
+      st.stage = 'prep';
+      st.time = st.prepSec;
+    } else {
+      st.stage = 'work';
+      st.time = st.workSec;
+    }
+    updateUI();
+  }
+
+  function toggleSettings() {
+    document.getElementById('settings-panel').classList.toggle('active');
+  }
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function handleDisplayClick() {
+    if (currentMode === 'timer') {
+      enableDisplayEdit();
+    } else if (currentMode === 'interval') {
+      openEditModal();
+    }
+  }
+
+  function enableDisplayEdit() {
+    const state = modesState.timer;
+    if (state.isRunning) {
+      state.isRunning = false;
+      updateUI();
+    }
+
+    const displayEl = document.getElementById('time-display');
+    const inputEl = document.getElementById('time-display-input');
+
+    inputEl.value = formatTime(state.time);
+    displayEl.classList.add('hidden');
+    inputEl.classList.remove('hidden');
+    inputEl.focus();
+    inputEl.select();
+  }
+
+  function saveDisplayEdit() {
+    const displayEl = document.getElementById('time-display');
+    const inputEl = document.getElementById('time-display-input');
+
+    if (inputEl.classList.contains('hidden')) return;
+
+    const sec = parseTimeToSeconds(inputEl.value.trim());
+    if (sec > 0) {
+      setPresetSeconds(sec);
+    }
+
+    inputEl.classList.add('hidden');
+    displayEl.classList.remove('hidden');
+    updateUI();
+  }
+
+  function handleDisplayInputKey(e) {
+    if (e.key === 'Enter') saveDisplayEdit();
+  }
+
+  function openEditModal() {
+    const state = modesState.interval;
+    if (state.isRunning) {
+      state.isRunning = false;
+      updateUI();
+    }
+
+    document.getElementById('modal-prep-input').value = formatTime(state.prepSec);
+    document.getElementById('modal-work-input').value = formatTime(state.workSec);
+    document.getElementById('modal-rest-input').value = formatTime(state.restSec);
+    document.getElementById('modal-sets-input').value = state.totalSets;
+
+    document.getElementById('edit-modal-overlay').classList.add('active');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal-overlay').classList.remove('active');
+  }
+
+  function saveModalEdit() {
+    const st = modesState.interval;
+    st.prepSec = parseTimeToSeconds(document.getElementById('modal-prep-input').value, true);
+    st.workSec = parseTimeToSeconds(document.getElementById('modal-work-input').value, true);
+    st.restSec = parseTimeToSeconds(document.getElementById('modal-rest-input').value, true);
+
+    const setsVal = parseInt(document.getElementById('modal-sets-input').value, 10);
+    if (!isNaN(setsVal) && setsVal > 0) st.totalSets = setsVal;
+
+    st.currentSet = 1;
+    if (st.prepSec > 0) {
+      st.stage = 'prep';
+      st.time = st.prepSec;
+    } else {
+      st.stage = 'work';
+      st.time = st.workSec;
+    }
+
+    closeEditModal();
+    updateUI();
+  }
+
+  function updateUI() {
+    const state = modesState[currentMode];
+    document.getElementById('time-display').textContent = formatTime(state.time);
+
+    const startBtn = document.getElementById('start-btn');
+    startBtn.textContent = state.isRunning ? '一時停止' : 'スタート';
+    startBtn.style.backgroundColor = state.isRunning ? '#e11d48' : 'var(--accent-color)';
+
+    const container = document.getElementById('widget-container');
+    container.classList.remove('stage-prep', 'stage-work', 'stage-rest');
+
+    if (currentMode === 'interval') {
+      document.getElementById('interval-sets-badge').textContent = `${state.currentSet} / ${state.totalSets}`;
+      
+      if (state.stage === 'prep') {
+        container.classList.add('stage-prep');
+      } else if (state.stage === 'work') {
+        container.classList.add('stage-work');
+      } else if (state.stage === 'rest') {
+        container.classList.add('stage-rest');
+      }
+    }
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    ['timer', 'stopwatch', 'interval'].forEach(m => {
+      document.getElementById(`tab-${m}`).classList.toggle('active', mode === m);
+    });
+
+    document.getElementById('slider-group').classList.toggle('hidden', mode !== 'timer');
+    document.getElementById('timer-presets-section').classList.toggle('hidden', mode !== 'timer');
+    document.getElementById('interval-presets-section').classList.toggle('hidden', mode !== 'interval');
+    document.getElementById('interval-info-bar').classList.toggle('hidden', mode !== 'interval');
+
+    updateUI();
+  }
+
+  function onSliderChange(val) {
+    const sec = parseInt(val, 10) * 60;
+    const state = modesState.timer;
+    if (!state.isRunning) {
+      state.time = sec;
+      state.initialTime = sec;
+      if (currentMode === 'timer') updateUI();
+    }
+  }
+
+  function setPresetSeconds(sec) {
+    const mins = Math.max(1, Math.round(sec / 60));
+    document.getElementById('time-slider').value = Math.min(60, mins);
+    
+    const state = modesState.timer;
+    if (!state.isRunning) {
+      state.time = sec;
+      state.initialTime = sec;
+      if (currentMode === 'timer') updateUI();
+    }
+  }
+
+  function toggleStart() {
+    const state = modesState[currentMode];
+    if (currentMode === 'interval' && state.stage === 'finished') {
+      resetTimer();
+    }
+    state.isRunning = !state.isRunning;
+    updateUI();
+  }
+
+  function resetTimer() {
+    const state = modesState[currentMode];
+    state.isRunning = false;
+
+    if (currentMode === 'timer') {
+      state.time = state.initialTime;
+    } else if (currentMode === 'stopwatch') {
+      state.time = 0;
+    } else if (currentMode === 'interval') {
+      state.currentSet = 1;
+      if (state.prepSec > 0) {
+        state.stage = 'prep';
+        state.time = state.prepSec;
+      } else {
+        state.stage = 'work';
+        state.time = state.workSec;
+      }
+    }
+    updateUI();
+  }
+
+  function advanceIntervalStage() {
+    const st = modesState.interval;
+
+    if (st.stage === 'prep') {
+      st.stage = 'work';
+      st.time = st.workSec;
+      triggerSound('work');
+    } else if (st.stage === 'work') {
+      if (st.currentSet >= st.totalSets) {
+        st.stage = 'finished';
+        st.time = 0;
+        st.isRunning = false;
+        triggerSound('finish');
+      } else if (st.restSec > 0) {
+        st.stage = 'rest';
+        st.time = st.restSec;
+        triggerSound('rest');
+      } else {
+        st.currentSet++;
+        st.stage = 'work';
+        st.time = st.workSec;
+        triggerSound('work');
+      }
+    } else if (st.stage === 'rest') {
+      st.currentSet++;
+      st.stage = 'work';
+      st.time = st.workSec;
+      triggerSound('work');
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      toggleStart();
+    } else if (e.key === 'r' || e.key === 'R') {
+      resetTimer();
+    }
+  });
+
+  setInterval(() => {
+    if (modesState.timer.isRunning) {
+      if (modesState.timer.time > 1) {
+        modesState.timer.time--;
+      } else {
+        modesState.timer.time = 0;
+        modesState.timer.isRunning = false;
+        triggerSound('timer');
+      }
+    }
+
+    if (modesState.stopwatch.isRunning) {
+      modesState.stopwatch.time++;
+    }
+
+    if (modesState.interval.isRunning) {
+      if (modesState.interval.time > 1) {
+        modesState.interval.time--;
+        if (modesState.interval.time <= 3) {
+          triggerSound('countdown');
+        }
+      } else {
+        advanceIntervalStage();
+      }
+    }
+
+    updateUI();
+  }, 1000);
+
+  loadConfig();
+  switchMode('timer');
+</script>
+
+</body>
+</html>
