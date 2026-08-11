@@ -1215,7 +1215,8 @@
       if (modesState.timer.time > 1) {
         modesState.timer.time--;
       } else {
-        modesState.timer.time = 0;
+        // タイマー終了時に元の設定時間（initialTime）に戻す
+        modesState.timer.time = modesState.timer.initialTime;
         modesState.timer.isRunning = false;
         triggerSound('timer');
         sendDesktopNotification("タイマー終了", "設定した時間が経過しました。");
