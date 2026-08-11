@@ -988,11 +988,10 @@
   }
 
   function saveDisplayEdit() {
-    const displayEl = document.getElementById('time-display');
     const inputsContainer = document.getElementById('time-display-inputs');
+    if (!inputsContainer || inputsContainer.classList.contains('hidden')) return;
 
-    if (inputsContainer.classList.contains('hidden')) return;
-
+    const displayEl = document.getElementById('time-display');
     const inputMin = document.getElementById('input-min');
     const inputSec = document.getElementById('input-sec');
 
@@ -1138,6 +1137,8 @@
   }
 
   function toggleStart() {
+    saveDisplayEdit();
+
     const state = modesState[currentMode];
     if (currentMode === 'interval' && state.stage === 'finished') {
       resetTimer();
