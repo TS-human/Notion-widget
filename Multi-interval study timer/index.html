@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Notion Multi-Timer Widget Pro Ultra</title>
+  <title>Notion Multi-Timer Widget</title>
   <style>
     :root {
       --bg-color: #ffffff;
@@ -47,7 +47,7 @@
       transition: background-color 0.2s;
     }
 
-    /* アラーム時画面フラッシュ */
+    /* アラーム時フラッシュ表示 */
     @keyframes flash-anim {
       0%, 100% { background-color: var(--card-bg); }
       50% { background-color: rgba(46, 170, 220, 0.35); }
@@ -98,11 +98,10 @@
       opacity: 0.75;
       display: inline-flex;
       align-items: center;
-      gap: 2px;
     }
     .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 
-    /* 時間表示（分と秒でそれぞれ個別でクリック可能） */
+    /* 時間表示（分・秒独立クリック） */
     .display {
       font-size: 42px;
       font-weight: 700;
@@ -132,7 +131,7 @@
       padding: 0 2px;
     }
 
-    /* 分・秒の個別の編集フォーム */
+    /* 編集用インプット */
     .display-edit-container {
       display: flex;
       justify-content: center;
@@ -316,21 +315,6 @@
     .audio-upload-list { display: flex; flex-direction: column; gap: 8px; }
     .audio-upload-item { display: flex; flex-direction: column; gap: 3px; }
     .audio-upload-header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--sub-text); }
-    
-    .notification-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-top: 6px;
-    }
-    .notification-label-check {
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-    }
 
     .shortcuts-hint {
       font-size: 10px;
@@ -355,7 +339,7 @@
     <button class="icon-btn" onclick="toggleSettings()" title="設定">⚙️</button>
   </div>
 
-  <!-- ポモドーロ用UI -->
+  <!-- ポモドーロUI -->
   <div id="pomo-group" class="hidden">
     <div class="pomo-mode">
       <button class="pomo-btn active" id="pomo-tab-work" onclick="selectPomoStage('work')">作業</button>
@@ -369,11 +353,11 @@
     <div class="preset-grid" id="pomo-presets-group"></div>
   </div>
 
-  <!-- メイン表示（分・秒を独立してクリック選択可能） -->
+  <!-- メイン表示 -->
   <div class="display" id="time-display">
-    <span class="display-part" id="time-display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』をドラッグ編集">05</span>
+    <span class="display-part" id="time-display-min" onclick="enableDisplayEdit('min')" title="クリックで『分』を選択編集">05</span>
     <span class="display-colon">:</span>
-    <span class="display-part" id="time-display-sec" onclick="enableDisplayEdit('sec')" title="クリックして『秒』をドラッグ編集">00</span>
+    <span class="display-part" id="time-display-sec" onclick="enableDisplayEdit('sec')" title="クリックで『秒』を選択編集">00</span>
   </div>
   
   <div class="display-edit-container hidden" id="display-edit-container">
@@ -382,7 +366,7 @@
     <input class="display-edit-input" id="edit-sec-input" type="number" min="0" max="59" placeholder="秒" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
   </div>
 
-  <!-- タイマー用スライダー -->
+  <!-- スライダー -->
   <div class="slider-container" id="slider-group">
     <div class="slider-header">
       <span>スライダー調整</span>
@@ -390,7 +374,7 @@
     <input type="range" id="time-slider" min="1" max="60" value="5" oninput="onSliderChange(this.value)">
   </div>
 
-  <!-- タイマー用テンプレート -->
+  <!-- テンプレート -->
   <div id="timer-presets-section">
     <div class="preset-section-title">タイマー テンプレート</div>
     <div class="preset-grid" id="presets-group"></div>
@@ -418,34 +402,19 @@
       <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="onVolumeChange(this.value)">
     </div>
 
-    <!-- 2. デスクトップ通知 -->
-    <div class="setting-group">
-      <div class="setting-label" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>デスクトップ通知</span>
-        <span id="noti-status" style="font-size:10px; font-weight:normal; color:var(--sub-text);">確認中...</span>
-      </div>
-      <div class="notification-row">
-        <label class="notification-label-check">
-          <input type="checkbox" id="noti-toggle" style="width:auto;" onchange="onNotificationToggle(this.checked)">
-          <span>通知を有効化</span>
-        </label>
-        <button class="sub-btn" id="noti-perm-btn" style="padding:4px 8px; font-size:10px;" onclick="requestNotificationPermission()">許可する</button>
-      </div>
-    </div>
-
-    <!-- 3. タイマーテンプレート -->
+    <!-- 2. タイマーテンプレート -->
     <div class="setting-group">
       <label class="setting-label">タイマー テンプレート (カンマ区切り)</label>
       <input type="text" id="preset-input" value="0:30, 1:00, 3:00, 5:00, 10:00, 15:00">
     </div>
 
-    <!-- 4. ポモドーロテンプレート -->
+    <!-- 3. ポモドーロテンプレート -->
     <div class="setting-group">
       <label class="setting-label">ポモドーロ テンプレート (改行区切り: 名称,作業,休憩)</label>
       <textarea id="pomo-presets-input" placeholder="標準,25:00,5:00&#10;長集中,50:00,10:00"></textarea>
     </div>
 
-    <!-- 5. カスタム音声 -->
+    <!-- 4. カスタム音声 -->
     <div class="setting-group" style="border-top: 1px dashed var(--border-color); padding-top: 10px;">
       <label class="setting-label">カスタム音声ファイル設定</label>
       <div class="audio-upload-list">
@@ -490,7 +459,6 @@
 
   let config = {
     volume: 0.8,
-    enableNotification: true,
     pomoTotalSec: 0,
     sounds: { timer: '', pomodoro: '' },
     timerPresets: ["0:30", "1:00", "3:00", "5:00", "10:00", "15:00"],
@@ -550,112 +518,13 @@
     setTimeout(() => el.classList.remove('flash'), 1300);
   }
 
-  /* --- 通知機能 --- */
-  function updateNotificationUI() {
-    const btn = document.getElementById('noti-perm-btn');
-    const status = document.getElementById('noti-status');
-    const toggle = document.getElementById('noti-toggle');
-
-    toggle.checked = !!config.enableNotification;
-
-    if (!('Notification' in window)) {
-      status.textContent = '非対応';
-      btn.style.display = 'none';
-      return;
-    }
-
-    if (Notification.permission === 'granted') {
-      status.textContent = '許可済み';
-      btn.textContent = 'テスト通知';
-      btn.onclick = () => sendDesktopNotification('テスト通知', 'デスクトップ通知は正しく動作しています！');
-    } else if (Notification.permission === 'denied') {
-      status.textContent = 'ブラウザで拒否中';
-      btn.textContent = '権限再設定';
-      btn.onclick = () => alert('ブラウザの設定から通知権限を許可してください。');
-    } else {
-      status.textContent = '未許可';
-      btn.textContent = '許可する';
-      btn.onclick = requestNotificationPermission;
-    }
-  }
-
-  function requestNotificationPermission() {
-    if (!('Notification' in window)) return;
-    Notification.requestPermission().then(() => {
-      updateNotificationUI();
-    });
-  }
-
-  function onNotificationToggle(checked) {
-    config.enableNotification = checked;
-    if (checked && 'Notification' in window && Notification.permission === 'default') {
-      requestNotificationPermission();
-    }
-    saveConfigToStorage();
-  }
-
-  function sendDesktopNotification(title, body) {
-    if (!config.enableNotification) return;
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body: body,
-          tag: 'notion-multi-timer-alert',
-          requireInteraction: true
-        });
-      } catch (e) {
-        console.error('Notification Error:', e);
-      }
-    }
-  }
-
-  function playFallbackBeep(type) {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume();
-      const now = ctx.currentTime;
-      
-      if (type === 'pomodoro') {
-        const notes = [523.25, 659.25, 783.99, 1046.50];
-        notes.forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          const startTime = now + idx * 0.12;
-          gain.gain.setValueAtTime(config.volume * 0.7, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.6);
-          osc.frequency.setValueAtTime(freq, startTime);
-          osc.start(startTime);
-          osc.stop(startTime + 0.6);
-        });
-      } else {
-        const times = [0, 0.12, 0.24, 0.5, 0.62, 0.74];
-        times.forEach(t => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          const startTime = now + t;
-          gain.gain.setValueAtTime(config.volume, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.09);
-          osc.frequency.setValueAtTime(880, startTime);
-          osc.start(startTime);
-          osc.stop(startTime + 0.09);
-        });
-      }
-    } catch(e) {}
-  }
-
   function playSound(type) {
     triggerFlash();
     const audio = audioElements[type];
     if (audio && audio.src && audio.src.startsWith('data:audio')) {
       audio.volume = config.volume;
       audio.currentTime = 0;
-      audio.play().catch(() => playFallbackBeep(type));
-    } else {
-      playFallbackBeep(type);
+      audio.play().catch(() => {});
     }
   }
 
@@ -687,7 +556,7 @@
 
   function loadConfig() {
     try {
-      const saved = localStorage.getItem('notion_multi_timer_config_v13');
+      const saved = localStorage.getItem('notion_multi_timer_config_final');
       if (saved) config = { ...config, ...JSON.parse(saved) };
     } catch(e) {}
 
@@ -712,12 +581,11 @@
 
     renderTimerPresets();
     renderPomoPresets();
-    updateNotificationUI();
   }
 
   function saveConfigToStorage() {
     try {
-      localStorage.setItem('notion_multi_timer_config_v13', JSON.stringify(config));
+      localStorage.setItem('notion_multi_timer_config_final', JSON.stringify(config));
     } catch(e) {}
   }
 
@@ -774,9 +642,6 @@
 
   function toggleSettings() {
     document.getElementById('settings-panel').classList.toggle('active');
-    if (document.getElementById('settings-panel').classList.contains('active')) {
-      updateNotificationUI();
-    }
   }
 
   function formatTime(sec) {
@@ -796,13 +661,6 @@
     const startBtn = document.getElementById('start-btn');
     startBtn.textContent = state.isRunning ? '一時停止' : 'スタート';
     startBtn.style.backgroundColor = state.isRunning ? '#e11d48' : 'var(--accent-color)';
-
-    // アプリ/ブラウザのタブタイトルの更新（Notionアプリ内での視覚通知）
-    if (state.isRunning) {
-      document.title = `(${formatted}) Notion Multi-Timer`;
-    } else {
-      document.title = `Notion Multi-Timer Widget`;
-    }
 
     if (currentMode === 'pomodoro') {
       const isWork = modesState.pomodoro.stage === 'work';
@@ -828,7 +686,7 @@
     updateUI();
   }
 
-  /* --- 分・秒個別の全選択付き編集機能 --- */
+  /* --- 分・秒 個別ドラッグ選択 --- */
   function handleInputSelect(inputEl) {
     setTimeout(() => {
       inputEl.select();
@@ -953,7 +811,6 @@
     selectPomoStage(modesState.pomodoro.stage);
   }
 
-  /* --- タイマーの開始・一時停止・絶対時間計算 --- */
   function startTimer() {
     const state = modesState[currentMode];
     if (state.time <= 0 && currentMode !== 'stopwatch') return;
@@ -966,10 +823,6 @@
     } else {
       state.endTime = now + (state.time * 1000);
     }
-
-    if ('Notification' in window && Notification.permission === 'default') {
-      requestNotificationPermission();
-    }
     updateUI();
   }
 
@@ -979,8 +832,8 @@
     updateUI();
   }
 
+  /* スタート時に数値を確定保存してから即始動 */
   function toggleStart() {
-    // 編集モード中の場合は即時に数値を確定保存
     if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
       saveDisplayEdit();
     }
@@ -1016,8 +869,6 @@
   function handleTimerFinished() {
     if (currentMode === 'timer') {
       playSound('timer');
-      sendDesktopNotification('⏱️ タイマー終了', '設定した時間が経過しました！');
-      document.title = '【⏰終了！】タイマー';
     } else if (currentMode === 'pomodoro') {
       playSound('pomodoro');
       if (modesState.pomodoro.stage === 'work') {
@@ -1025,11 +876,6 @@
         config.pomoTotalSec = (config.pomoTotalSec || 0) + workSec;
         document.getElementById('pomo-count-val').textContent = formatPomoTime(config.pomoTotalSec);
         saveConfigToStorage();
-        sendDesktopNotification('🍅 作業時間終了！', 'お疲れ様でした。休憩に入りましょう！');
-        document.title = '【☕ 休憩時間】ポモドーロ';
-      } else {
-        sendDesktopNotification('☕ 休憩終了！', 'リフレッシュ完了です。次の作業を始めましょう！');
-        document.title = '【🍅 作業開始】ポモドーロ';
       }
 
       modesState.pomodoro.stage = (modesState.pomodoro.stage === 'work') ? 'break' : 'work';
@@ -1048,7 +894,7 @@
     }
   });
 
-  // 定期ループ（500ms周期でバックグラウンド復帰時にも高速同調）
+  /* タイムスタンプ同期（バックグラウンドでタイマーが狂わない仕組み） */
   setInterval(() => {
     const state = modesState[currentMode];
     if (!state.isRunning) return;
