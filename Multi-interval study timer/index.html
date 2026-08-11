@@ -1029,16 +1029,15 @@
     updateUI();
   }
 
-  function handleTimerFinished() {
-    if (currentMode === 'timer') {
+  function handleTimerFinished(finishedMode = currentMode) {
+    if (finishedMode === 'timer') {
       playSound('timer');
       sendDesktopNotification('⏱️ タイマー終了', '設定した時間が経過しました！');
       document.title = '【⏰終了！】タイマー';
       
       // 終了後、元のセット時間へ自動リセット
       modesState.timer.time = modesState.timer.initialTime;
-      updateUI();
-    } else if (currentMode === 'pomodoro') {
+    } else if (finishedMode === 'pomodoro') {
       playSound('pomodoro');
       if (modesState.pomodoro.stage === 'work') {
         const workSec = parseTimeToSeconds(config.pomo.work);
@@ -1055,8 +1054,8 @@
       modesState.pomodoro.stage = (modesState.pomodoro.stage === 'work') ? 'break' : 'work';
       modesState.pomodoro.time = parseTimeToSeconds(config.pomo[modesState.pomodoro.stage]);
       modesState.pomodoro.initialTime = modesState.pomodoro.time;
-      updateUI();
     }
+    updateUI();
   }
 
   window.addEventListener('keydown', (e) => {
@@ -1069,24 +1068,28 @@
     }
   });
 
+  /* 全モードを並行してバックグラウンド監視するループ */
   setInterval(() => {
-    const state = modesState[currentMode];
-    if (!state.isRunning) return;
-
     const now = Date.now();
 
-    if (currentMode === 'stopwatch') {
-      state.time = Math.floor((now - state.startTime) / 1000);
-    } else {
-      const remaining = Math.ceil((state.endTime - now) / 1000);
-      if (remaining <= 0) {
-        state.time = 0;
-        state.isRunning = false;
-        handleTimerFinished();
+    Object.keys(modesState).forEach(mode => {
+      const state = modesState[mode];
+      if (!state.isRunning) return;
+
+      if (mode === 'stopwatch') {
+        state.time = Math.floor((now - state.startTime) / 1000);
       } else {
-        state.time = remaining;
+        const remaining = Math.ceil((state.endTime - now) / 1000);
+        if (remaining <= 0) {
+          state.time = 0;
+          state.isRunning = false;
+          handleTimerFinished(mode);
+        } else {
+          state.time = remaining;
+        }
       }
-    }
+    });
+
     updateUI();
   }, 500);
 
