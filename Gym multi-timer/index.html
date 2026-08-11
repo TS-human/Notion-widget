@@ -151,23 +151,32 @@
       font-variant-numeric: tabular-nums;
       margin: 4px 0 10px;
       letter-spacing: -1px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
       cursor: pointer;
-      border-radius: 8px;
-      transition: background-color 0.2s;
-      padding: 2px 0;
     }
-    .display:hover {
-      background-color: rgba(0, 0, 0, 0.05);
+    .time-part {
+      padding: 0 2px;
     }
-    
-    .display-input {
-      font-size: 42px;
+    .time-sep {
+      opacity: 0.6;
+    }
+
+    .display-input-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      margin: 4px 0 10px;
+    }
+    .unit-input {
+      font-size: 38px;
       font-weight: 700;
       text-align: center;
       font-variant-numeric: tabular-nums;
-      margin: 4px 0 10px;
-      letter-spacing: -1px;
-      width: 100%;
+      width: 72px;
       border: 2px solid var(--accent-color);
       border-radius: 8px;
       background: var(--bg-color);
@@ -175,7 +184,15 @@
       box-sizing: border-box;
       outline: none;
       font-family: inherit;
-      padding: 0;
+      padding: 2px 0;
+    }
+    .unit-input::-webkit-inner-spin-button,
+    .unit-input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .unit-input[type=number] {
+      -moz-appearance: textfield;
     }
 
     .slider-container { margin-bottom: 10px; }
@@ -411,8 +428,17 @@
     <span class="sets-badge" id="interval-sets-badge">1 / 8</span>
   </div>
 
-  <div class="display" id="time-display" onclick="handleDisplayClick()" title="クリックして時間を入力">05:00</div>
-  <input class="display-input hidden" id="time-display-input" type="text" placeholder="例: 1:30, 45, 2m" onkeydown="handleDisplayInputKey(event)" onblur="saveDisplayEdit()">
+  <div class="display" id="time-display">
+    <span class="time-part" id="display-min" onclick="handleDisplayClick('min')">05</span>
+    <span class="time-sep">:</span>
+    <span class="time-part" id="display-sec" onclick="handleDisplayClick('sec')">00</span>
+  </div>
+
+  <div class="display-input-container hidden" id="time-display-inputs">
+    <input class="unit-input" id="input-min" type="number" min="0" max="999" placeholder="00" onkeydown="handleDisplayInputKey(event)" onblur="handleInputBlur(event)" onfocus="selectInputText(this)">
+    <span class="time-sep" style="font-size:32px; font-weight:700;">:</span>
+    <input class="unit-input" id="input-sec" type="number" min="0" max="59" placeholder="00" onkeydown="handleDisplayInputKey(event)" onblur="handleInputBlur(event)" onfocus="selectInputText(this)">
+  </div>
 
   <div class="slider-container" id="slider-group">
     <div class="slider-header">
@@ -436,7 +462,6 @@
     <button class="sub-btn" id="reset-btn" onclick="resetTimer()">リセット</button>
   </div>
 
-  <!-- インターバル設定モーダル -->
   <div class="edit-modal-overlay" id="edit-modal-overlay">
     <div class="edit-modal-card">
       <div class="modal-header">
@@ -447,19 +472,19 @@
       <div class="modal-grid">
         <div class="modal-field">
           <label>準備時間 (例: 5秒 / 0:05)</label>
-          <input type="text" id="modal-prep-input" placeholder="0:05">
+          <input type="text" id="modal-prep-input" placeholder="0:05" onfocus="selectInputText(this)">
         </div>
         <div class="modal-field">
           <label>運動時間 (例: 20秒 / 0:20)</label>
-          <input type="text" id="modal-work-input" placeholder="0:20">
+          <input type="text" id="modal-work-input" placeholder="0:20" onfocus="selectInputText(this)">
         </div>
         <div class="modal-field">
           <label>休憩時間 (例: 10秒 / 0:10)</label>
-          <input type="text" id="modal-rest-input" placeholder="0:10">
+          <input type="text" id="modal-rest-input" placeholder="0:10" onfocus="selectInputText(this)">
         </div>
         <div class="modal-field">
           <label>セット数</label>
-          <input type="number" id="modal-sets-input" min="1" max="99" value="8">
+          <input type="number" id="modal-sets-input" min="1" max="99" value="8" onfocus="selectInputText(this)">
         </div>
       </div>
 
@@ -467,23 +492,12 @@
     </div>
   </div>
 
-  <!-- 設定カスタマイズパネル -->
   <div class="settings-panel" id="settings-panel">
     <div class="settings-title">
       <span>⚙️ 設定カスタマイズ</span>
       <button class="icon-btn" onclick="toggleSettings()">✖</button>
     </div>
 
-    <!-- デスクトップ通知設定 -->
-    <div class="setting-group">
-      <label class="checkbox-label">
-        <input type="checkbox" id="notification-toggle" onchange="toggleNotificationPermission(this.checked)">
-        <span>🔔 デスクトップ通知を有効化</span>
-      </label>
-      <div id="notification-status-text" style="font-size: 9px; color: var(--sub-text); margin-top: 2px;"></div>
-    </div>
-
-    <!-- 1. 音量調整 -->
     <div class="setting-group">
       <div class="setting-label" style="display:flex; justify-content:space-between;">
         <span>🔊 音量</span>
@@ -492,50 +506,51 @@
       <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="onVolumeChange(this.value)">
     </div>
 
-    <!-- 2. テンプレート -->
     <div class="setting-group">
       <label class="setting-label">タイマー テンプレート (カンマ区切り)</label>
-      <input type="text" id="preset-input" value="0:30, 1:00, 3:00, 5:00, 10:00, 15:00">
+      <input type="text" id="preset-input" value="0:30, 1:00, 3:00, 5:00, 10:00, 15:00" onfocus="selectInputText(this)">
     </div>
 
     <div class="setting-group">
       <label class="setting-label">インターバル テンプレート (改行: 名称,準備,運動,休憩,セット数)</label>
-      <textarea id="interval-presets-input" placeholder="タバタ, 0:05, 0:20, 0:10, 8&#10;筋トレ, 0:10, 0:45, 0:15, 4"></textarea>
+      <textarea id="interval-presets-input" placeholder="タバタ, 0:05, 0:20, 0:10, 8&#10;筋トレ, 0:10, 0:45, 0:15, 4" onfocus="selectInputText(this)"></textarea>
     </div>
 
-    <!-- 3. ファイル選択 -->
+    <div class="setting-group" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 12px;">
+      <label class="checkbox-label">
+        <input type="checkbox" id="notification-toggle" onchange="toggleNotificationPermission(this.checked)">
+        <span>🔔 デスクトップ通知を有効化</span>
+      </label>
+      <div id="notification-status-text" style="font-size: 9px; color: var(--sub-text); margin-top: 2px;"></div>
+    </div>
+
     <div class="audio-settings-section">
       <div class="preset-section-title" style="font-size:11px; margin-bottom:8px; color:var(--text-color);">📁 効果音ファイル選択</div>
 
-      <!-- タイマー終了音 -->
       <div class="sound-item">
         <label class="setting-label">タイマー終了音</label>
         <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-timer" onchange="handleSoundUpload(event, 'timer')">
         <div class="sound-status" id="sound-status-timer"></div>
       </div>
 
-      <!-- 3秒カウント音 -->
       <div class="sound-item">
         <label class="setting-label">3秒カウント音</label>
         <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-countdown" onchange="handleSoundUpload(event, 'countdown')">
         <div class="sound-status" id="sound-status-countdown"></div>
       </div>
 
-      <!-- 運動開始音 -->
       <div class="sound-item">
         <label class="setting-label">運動開始音</label>
         <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-work" onchange="handleSoundUpload(event, 'work')">
         <div class="sound-status" id="sound-status-work"></div>
       </div>
 
-      <!-- 休憩開始音 -->
       <div class="sound-item">
         <label class="setting-label">休憩開始音</label>
         <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-rest" onchange="handleSoundUpload(event, 'rest')">
         <div class="sound-status" id="sound-status-rest"></div>
       </div>
 
-      <!-- インターバル完了音 -->
       <div class="sound-item">
         <label class="setting-label">インターバル完了音</label>
         <input type="file" class="sound-file-input" accept="audio/*" id="sound-input-finish" onchange="handleSoundUpload(event, 'finish')">
@@ -543,7 +558,6 @@
       </div>
     </div>
 
-    <!-- 4. ショートカットの説明 -->
     <div class="shortcuts-hint">
       <strong>⌨️ ショートカット</strong><br>
       • [Space]: スタート / 一時停止<br>
@@ -590,16 +604,19 @@
     }
   };
 
-  /**
-   * 改善版: 分数・秒数の入力を柔軟にパースする関数
-   * 対応表記: "1:30", "90", "45s", "45秒", "2m", "2分", "1分30秒", "1.5"
-   */
+  function selectInputText(el) {
+    setTimeout(() => {
+      if (el && typeof el.select === 'function') {
+        el.select();
+      }
+    }, 10);
+  }
+
   function parseTimeToSeconds(input) {
     if (typeof input === 'number') return input;
     const str = String(input).trim().toLowerCase();
     if (!str) return 0;
 
-    // 1. コロン形式 (mm:ss または m:s)
     if (str.includes(':')) {
       const parts = str.split(':');
       const m = parseInt(parts[0], 10) || 0;
@@ -607,7 +624,6 @@
       return m * 60 + s;
     }
 
-    // 2. 「分」「m」および「秒」「s」単位の解析
     let minutes = 0;
     let seconds = 0;
     let hasUnit = false;
@@ -628,13 +644,11 @@
       return Math.round(minutes * 60 + seconds);
     }
 
-    // 3. 小数入力（例: 1.5 -> 1.5分 = 90秒）
     if (str.includes('.')) {
       const num = parseFloat(str);
       return isNaN(num) ? 0 : Math.round(num * 60);
     }
 
-    // 4. 数字のみの場合：筋トレ・タイマーの用途として直感的な「秒数」として解釈
     const num = parseInt(str, 10);
     if (isNaN(num)) return 0;
     return num;
@@ -651,10 +665,7 @@
     if (!config.enableNotification) return;
     if ("Notification" in window && Notification.permission === "granted") {
       try {
-        new Notification(title, {
-          body: body,
-          icon: "⏱️"
-        });
+        new Notification(title, { body: body, icon: "⏱️" });
       } catch (e) {}
     }
   }
@@ -825,7 +836,7 @@
 
   function loadConfig() {
     try {
-      const saved = localStorage.getItem('notion_fitness_timer_config_v7');
+      const saved = localStorage.getItem('notion_fitness_timer_config_v9');
       if (saved) config = { ...config, ...JSON.parse(saved) };
     } catch(e) {}
 
@@ -851,7 +862,7 @@
 
   function saveConfigToStorage() {
     try {
-      localStorage.setItem('notion_fitness_timer_config_v7', JSON.stringify(config));
+      localStorage.setItem('notion_fitness_timer_config_v9', JSON.stringify(config));
     } catch(e) {}
   }
 
@@ -930,51 +941,88 @@
     document.getElementById('settings-panel').classList.toggle('active');
   }
 
-  function formatTime(sec) {
+  function formatTimeParts(sec) {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return {
+      mStr: String(m).padStart(2, '0'),
+      sStr: String(s).padStart(2, '0')
+    };
   }
 
-  function handleDisplayClick() {
-    if (currentMode === 'timer') {
-      enableDisplayEdit();
-    } else if (currentMode === 'interval') {
+  function handleDisplayClick(targetUnit) {
+    if (currentMode === 'interval') {
       openEditModal();
+    } else if (currentMode === 'timer') {
+      enableDisplayEdit(targetUnit);
     }
   }
 
-  function enableDisplayEdit() {
+  function enableDisplayEdit(targetUnit) {
     const state = modesState.timer;
     if (state.isRunning) {
       state.isRunning = false;
       updateUI();
     }
 
+    const { mStr, sStr } = formatTimeParts(state.time);
+    
     const displayEl = document.getElementById('time-display');
-    const inputEl = document.getElementById('time-display-input');
+    const inputsContainer = document.getElementById('time-display-inputs');
+    const inputMin = document.getElementById('input-min');
+    const inputSec = document.getElementById('input-sec');
 
-    inputEl.value = formatTime(state.time);
+    inputMin.value = parseInt(mStr, 10);
+    inputSec.value = parseInt(sStr, 10);
+
     displayEl.classList.add('hidden');
-    inputEl.classList.remove('hidden');
-    inputEl.focus();
-    inputEl.select();
+    inputsContainer.classList.remove('hidden');
+
+    if (targetUnit === 'min') {
+      inputMin.focus();
+      selectInputText(inputMin);
+    } else {
+      inputSec.focus();
+      selectInputText(inputSec);
+    }
   }
 
   function saveDisplayEdit() {
     const displayEl = document.getElementById('time-display');
-    const inputEl = document.getElementById('time-display-input');
+    const inputsContainer = document.getElementById('time-display-inputs');
 
-    if (inputEl.classList.contains('hidden')) return;
+    if (inputsContainer.classList.contains('hidden')) return;
 
-    const sec = parseTimeToSeconds(inputEl.value.trim());
-    if (sec > 0) {
-      setPresetSeconds(sec);
+    const inputMin = document.getElementById('input-min');
+    const inputSec = document.getElementById('input-sec');
+
+    let m = parseInt(inputMin.value, 10) || 0;
+    let s = parseInt(inputSec.value, 10) || 0;
+
+    if (s >= 60) {
+      m += Math.floor(s / 60);
+      s = s % 60;
     }
 
-    inputEl.classList.add('hidden');
+    const totalSec = m * 60 + s;
+    if (totalSec >= 0) {
+      setPresetSeconds(totalSec);
+    }
+
+    inputsContainer.classList.add('hidden');
     displayEl.classList.remove('hidden');
     updateUI();
+  }
+
+  function handleInputBlur(e) {
+    setTimeout(() => {
+      const active = document.activeElement;
+      const inputMin = document.getElementById('input-min');
+      const inputSec = document.getElementById('input-sec');
+      if (active !== inputMin && active !== inputSec) {
+        saveDisplayEdit();
+      }
+    }, 150);
   }
 
   function handleDisplayInputKey(e) {
@@ -988,9 +1036,13 @@
       updateUI();
     }
 
-    document.getElementById('modal-prep-input').value = formatTime(state.prepSec);
-    document.getElementById('modal-work-input').value = formatTime(state.workSec);
-    document.getElementById('modal-rest-input').value = formatTime(state.restSec);
+    const { mStr: pM, sStr: pS } = formatTimeParts(state.prepSec);
+    const { mStr: wM, sStr: wS } = formatTimeParts(state.workSec);
+    const { mStr: rM, sStr: rS } = formatTimeParts(state.restSec);
+
+    document.getElementById('modal-prep-input').value = `${pM}:${pS}`;
+    document.getElementById('modal-work-input').value = `${wM}:${wS}`;
+    document.getElementById('modal-rest-input').value = `${rM}:${rS}`;
     document.getElementById('modal-sets-input').value = state.totalSets;
 
     document.getElementById('edit-modal-overlay').classList.add('active');
@@ -1024,7 +1076,10 @@
 
   function updateUI() {
     const state = modesState[currentMode];
-    document.getElementById('time-display').textContent = formatTime(state.time);
+    const { mStr, sStr } = formatTimeParts(state.time);
+
+    document.getElementById('display-min').textContent = mStr;
+    document.getElementById('display-sec').textContent = sStr;
 
     const startBtn = document.getElementById('start-btn');
     startBtn.textContent = state.isRunning ? '一時停止' : 'スタート';
