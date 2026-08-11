@@ -60,7 +60,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .tabs {
       display: flex;
@@ -102,7 +102,29 @@
     }
     .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 
-    /* 時間表示（分と秒でそれぞれ個別でクリック可能） */
+    /* 累計時間バー（右上に配置） */
+    .pomo-total-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 2px;
+      margin-bottom: 2px;
+    }
+    .session-badge {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--accent-color);
+      background: rgba(46, 170, 220, 0.12);
+      padding: 3px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .session-badge:hover {
+      background: rgba(46, 170, 220, 0.22);
+    }
+
+    /* 時間表示 */
     .display {
       font-size: 42px;
       font-weight: 700;
@@ -190,15 +212,6 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-    .session-badge {
-      font-size: 10px;
-      font-weight: bold;
-      color: var(--accent-color);
-      background: rgba(46, 170, 220, 0.12);
-      padding: 2px 6px;
-      border-radius: 8px;
-      cursor: pointer;
     }
     .preset-grid {
       display: grid;
@@ -355,6 +368,24 @@
     <button class="icon-btn" onclick="toggleSettings()" title="設定">⚙️</button>
   </div>
 
+  <!-- 累計作業時間（ポモドーロモード時、右上に表示） -->
+  <div id="pomo-total-bar" class="pomo-total-bar hidden">
+    <span class="session-badge" id="session-count-badge" onclick="resetPomoCount()" title="クリックで累計作業時間をリセット">🍅 <span id="pomo-count-val">0分</span></span>
+  </div>
+
+  <!-- メイン表示 -->
+  <div class="display" id="time-display">
+    <span class="display-part" id="time-display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』を編集">05</span>
+    <span class="display-colon">:</span>
+    <span class="display-part" id="time-display-sec" onclick="enableDisplayEdit('sec')" title="クリックして『秒』を編集">00</span>
+  </div>
+  
+  <div class="display-edit-container hidden" id="display-edit-container">
+    <input class="display-edit-input" id="edit-min-input" type="number" min="0" max="999" placeholder="分" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
+    <span class="display-edit-colon">:</span>
+    <input class="display-edit-input" id="edit-sec-input" type="number" min="0" max="59" placeholder="秒" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
+  </div>
+
   <!-- ポモドーロ用UI -->
   <div id="pomo-group" class="hidden">
     <div class="pomo-mode">
@@ -364,22 +395,8 @@
 
     <div class="preset-section-title">
       <span>ポモドーロ テンプレート</span>
-      <span class="session-badge" id="session-count-badge" onclick="resetPomoCount()" title="クリックで累計作業時間をリセット">🍅 <span id="pomo-count-val">0分</span></span>
     </div>
     <div class="preset-grid" id="pomo-presets-group"></div>
-  </div>
-
-  <!-- メイン表示（分・秒を独立してクリック選択可能） -->
-  <div class="display" id="time-display">
-    <span class="display-part" id="time-display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』をドラッグ編集">05</span>
-    <span class="display-colon">:</span>
-    <span class="display-part" id="time-display-sec" onclick="enableDisplayEdit('sec')" title="クリックして『秒』をドラッグ編集">00</span>
-  </div>
-  
-  <div class="display-edit-container hidden" id="display-edit-container">
-    <input class="display-edit-input" id="edit-min-input" type="number" min="0" max="999" placeholder="分" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
-    <span class="display-edit-colon">:</span>
-    <input class="display-edit-input" id="edit-sec-input" type="number" min="0" max="59" placeholder="秒" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
   </div>
 
   <!-- タイマー用スライダー -->
@@ -797,7 +814,6 @@
     startBtn.textContent = state.isRunning ? '一時停止' : 'スタート';
     startBtn.style.backgroundColor = state.isRunning ? '#e11d48' : 'var(--accent-color)';
 
-    // アプリ/ブラウザのタブタイトルの更新（Notionアプリ内での視覚通知）
     if (state.isRunning) {
       document.title = `(${formatted}) Notion Multi-Timer`;
     } else {
@@ -824,11 +840,12 @@
     document.getElementById('slider-group').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('timer-presets-section').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('pomo-group').classList.toggle('hidden', mode !== 'pomodoro');
+    document.getElementById('pomo-total-bar').classList.toggle('hidden', mode !== 'pomodoro');
 
     updateUI();
   }
 
-  /* --- 分・秒個別の全選択付き編集機能 --- */
+  /* --- 分・秒個別の編集機能 --- */
   function handleInputSelect(inputEl) {
     setTimeout(() => {
       inputEl.select();
@@ -953,7 +970,7 @@
     selectPomoStage(modesState.pomodoro.stage);
   }
 
-  /* --- タイマーの開始・一時停止・絶対時間計算 --- */
+  /* --- タイマーの開始・一時停止・時間計算 --- */
   function startTimer() {
     const state = modesState[currentMode];
     if (state.time <= 0 && currentMode !== 'stopwatch') return;
@@ -980,7 +997,6 @@
   }
 
   function toggleStart() {
-    // 編集モード中の場合は即時に数値を確定保存
     if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
       saveDisplayEdit();
     }
@@ -1048,7 +1064,6 @@
     }
   });
 
-  // 定期ループ（500ms周期でバックグラウンド復帰時にも高速同調）
   setInterval(() => {
     const state = modesState[currentMode];
     if (!state.isRunning) return;
