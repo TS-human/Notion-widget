@@ -102,7 +102,7 @@
     }
     .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 
-    /* 時間表示 */
+    /* 時間表示（分と秒でそれぞれ個別でクリック可能） */
     .display {
       font-size: 42px;
       font-weight: 700;
@@ -110,16 +110,26 @@
       font-variant-numeric: tabular-nums;
       margin: 4px 0 10px;
       letter-spacing: -1px;
-      cursor: pointer;
       border-radius: 8px;
-      transition: background-color 0.2s, transform 0.1s;
       padding: 2px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-    .display:hover {
-      background-color: rgba(0, 0, 0, 0.05);
+    .display-part {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 0 4px;
+      transition: background-color 0.15s, transform 0.1s;
     }
-    .display:active {
-      transform: scale(0.98);
+    .display-part:hover {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+    .display-part:active {
+      transform: scale(0.95);
+    }
+    .display-colon {
+      padding: 0 2px;
     }
 
     /* 分・秒の個別の編集フォーム */
@@ -359,8 +369,12 @@
     <div class="preset-grid" id="pomo-presets-group"></div>
   </div>
 
-  <!-- メイン表示（クリックで全選択付き編集） -->
-  <div class="display" id="time-display" onclick="enableDisplayEdit()" title="クリックして時間を編集">05:00</div>
+  <!-- メイン表示（分・秒を独立してクリック選択可能） -->
+  <div class="display" id="time-display">
+    <span class="display-part" id="time-display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』をドラッグ編集">05</span>
+    <span class="display-colon">:</span>
+    <span class="display-part" id="time-display-sec" onclick="enableDisplayEdit('sec')" title="クリックして『秒』をドラッグ編集">00</span>
+  </div>
   
   <div class="display-edit-container hidden" id="display-edit-container">
     <input class="display-edit-input" id="edit-min-input" type="number" min="0" max="999" placeholder="分" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
@@ -464,9 +478,9 @@
   let currentMode = 'timer';
 
   const modesState = {
-    timer: { time: 300, initialTime: 300, isRunning: false },
-    stopwatch: { time: 0, isRunning: false },
-    pomodoro: { time: 1500, initialTime: 1500, isRunning: false, stage: 'work' }
+    timer: { time: 300, initialTime: 300, isRunning: false, endTime: null },
+    stopwatch: { time: 0, isRunning: false, startTime: null },
+    pomodoro: { time: 1500, initialTime: 1500, isRunning: false, stage: 'work', endTime: null }
   };
 
   const audioElements = {
@@ -536,7 +550,7 @@
     setTimeout(() => el.classList.remove('flash'), 1300);
   }
 
-  /* --- デスクトップ通知関連 --- */
+  /* --- 通知機能 --- */
   function updateNotificationUI() {
     const btn = document.getElementById('noti-perm-btn');
     const status = document.getElementById('noti-status');
@@ -557,7 +571,7 @@
     } else if (Notification.permission === 'denied') {
       status.textContent = 'ブラウザで拒否中';
       btn.textContent = '権限再設定';
-      btn.onclick = () => alert('ブラウザのサイト設定から通知権限を許可してください。');
+      btn.onclick = () => alert('ブラウザの設定から通知権限を許可してください。');
     } else {
       status.textContent = '未許可';
       btn.textContent = '許可する';
@@ -582,13 +596,12 @@
 
   function sendDesktopNotification(title, body) {
     if (!config.enableNotification) return;
-    if (!('Notification' in window)) return;
-
-    if (Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted') {
       try {
         new Notification(title, {
           body: body,
-          tag: 'notion-multi-timer-alert'
+          tag: 'notion-multi-timer-alert',
+          requireInteraction: true
         });
       } catch (e) {
         console.error('Notification Error:', e);
@@ -599,6 +612,7 @@
   function playFallbackBeep(type) {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
       const now = ctx.currentTime;
       
       if (type === 'pomodoro') {
@@ -616,7 +630,7 @@
           osc.stop(startTime + 0.6);
         });
       } else {
-        const times = [0, 0.1, 0.2, 0.45, 0.55, 0.65];
+        const times = [0, 0.12, 0.24, 0.5, 0.62, 0.74];
         times.forEach(t => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -624,10 +638,10 @@
           gain.connect(ctx.destination);
           const startTime = now + t;
           gain.gain.setValueAtTime(config.volume, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.09);
           osc.frequency.setValueAtTime(880, startTime);
           osc.start(startTime);
-          osc.stop(startTime + 0.08);
+          osc.stop(startTime + 0.09);
         });
       }
     } catch(e) {}
@@ -773,11 +787,22 @@
 
   function updateUI() {
     const state = modesState[currentMode];
-    document.getElementById('time-display').textContent = formatTime(state.time);
+    const formatted = formatTime(state.time);
+    const parts = formatted.split(':');
+
+    document.getElementById('time-display-min').textContent = parts[0];
+    document.getElementById('time-display-sec').textContent = parts[1];
 
     const startBtn = document.getElementById('start-btn');
     startBtn.textContent = state.isRunning ? '一時停止' : 'スタート';
     startBtn.style.backgroundColor = state.isRunning ? '#e11d48' : 'var(--accent-color)';
+
+    // アプリ/ブラウザのタブタイトルの更新（Notionアプリ内での視覚通知）
+    if (state.isRunning) {
+      document.title = `(${formatted}) Notion Multi-Timer`;
+    } else {
+      document.title = `Notion Multi-Timer Widget`;
+    }
 
     if (currentMode === 'pomodoro') {
       const isWork = modesState.pomodoro.stage === 'work';
@@ -787,6 +812,10 @@
   }
 
   function switchMode(mode) {
+    if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
+      saveDisplayEdit();
+    }
+
     currentMode = mode;
     ['timer', 'stopwatch', 'pomodoro'].forEach(m => {
       document.getElementById(`tab-${m}`).classList.toggle('active', mode === m);
@@ -799,20 +828,19 @@
     updateUI();
   }
 
-  /* --- 直感編集（全選択 / ドラッグ状態対応） --- */
+  /* --- 分・秒個別の全選択付き編集機能 --- */
   function handleInputSelect(inputEl) {
     setTimeout(() => {
       inputEl.select();
     }, 0);
   }
 
-  function enableDisplayEdit() {
+  function enableDisplayEdit(targetField = 'min') {
     if (currentMode === 'stopwatch') return;
 
     const state = modesState[currentMode];
     if (state.isRunning) {
-      state.isRunning = false;
-      updateUI();
+      pauseTimer();
     }
 
     const m = Math.floor(state.time / 60);
@@ -828,9 +856,10 @@
 
     displayEl.classList.add('hidden');
     editContainer.classList.remove('hidden');
-    
-    minInput.focus();
-    handleInputSelect(minInput);
+
+    const focusTarget = (targetField === 'sec') ? secInput : minInput;
+    focusTarget.focus();
+    handleInputSelect(focusTarget);
   }
 
   function handleDisplayBlur() {
@@ -907,8 +936,11 @@
   }
 
   function selectPomoStage(stage) {
+    if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
+      saveDisplayEdit();
+    }
     const state = modesState.pomodoro;
-    state.isRunning = false;
+    pauseTimer();
     state.stage = stage;
     state.time = parseTimeToSeconds(config.pomo[stage]);
     state.initialTime = state.time;
@@ -921,18 +953,51 @@
     selectPomoStage(modesState.pomodoro.stage);
   }
 
-  function toggleStart() {
+  /* --- タイマーの開始・一時停止・絶対時間計算 --- */
+  function startTimer() {
     const state = modesState[currentMode];
-    state.isRunning = !state.isRunning;
-    
-    if (state.isRunning && 'Notification' in window && Notification.permission === 'default') {
+    if (state.time <= 0 && currentMode !== 'stopwatch') return;
+
+    state.isRunning = true;
+    const now = Date.now();
+
+    if (currentMode === 'stopwatch') {
+      state.startTime = now - (state.time * 1000);
+    } else {
+      state.endTime = now + (state.time * 1000);
+    }
+
+    if ('Notification' in window && Notification.permission === 'default') {
       requestNotificationPermission();
     }
-    
     updateUI();
   }
 
+  function pauseTimer() {
+    const state = modesState[currentMode];
+    state.isRunning = false;
+    updateUI();
+  }
+
+  function toggleStart() {
+    // 編集モード中の場合は即時に数値を確定保存
+    if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
+      saveDisplayEdit();
+    }
+
+    const state = modesState[currentMode];
+    if (state.isRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  }
+
   function resetTimer() {
+    if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
+      saveDisplayEdit();
+    }
+
     const state = modesState[currentMode];
     state.isRunning = false;
 
@@ -948,6 +1013,31 @@
     updateUI();
   }
 
+  function handleTimerFinished() {
+    if (currentMode === 'timer') {
+      playSound('timer');
+      sendDesktopNotification('⏱️ タイマー終了', '設定した時間が経過しました！');
+      document.title = '【⏰終了！】タイマー';
+    } else if (currentMode === 'pomodoro') {
+      playSound('pomodoro');
+      if (modesState.pomodoro.stage === 'work') {
+        const workSec = parseTimeToSeconds(config.pomo.work);
+        config.pomoTotalSec = (config.pomoTotalSec || 0) + workSec;
+        document.getElementById('pomo-count-val').textContent = formatPomoTime(config.pomoTotalSec);
+        saveConfigToStorage();
+        sendDesktopNotification('🍅 作業時間終了！', 'お疲れ様でした。休憩に入りましょう！');
+        document.title = '【☕ 休憩時間】ポモドーロ';
+      } else {
+        sendDesktopNotification('☕ 休憩終了！', 'リフレッシュ完了です。次の作業を始めましょう！');
+        document.title = '【🍅 作業開始】ポモドーロ';
+      }
+
+      modesState.pomodoro.stage = (modesState.pomodoro.stage === 'work') ? 'break' : 'work';
+      modesState.pomodoro.time = parseTimeToSeconds(config.pomo[modesState.pomodoro.stage]);
+      modesState.pomodoro.initialTime = modesState.pomodoro.time;
+    }
+  }
+
   window.addEventListener('keydown', (e) => {
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
     if (e.code === 'Space') {
@@ -958,48 +1048,27 @@
     }
   });
 
+  // 定期ループ（500ms周期でバックグラウンド復帰時にも高速同調）
   setInterval(() => {
-    if (modesState.timer.isRunning) {
-      if (modesState.timer.time > 0) {
-        modesState.timer.time--;
-        if (modesState.timer.time === 0) {
-          modesState.timer.isRunning = false;
-          playSound('timer');
-          sendDesktopNotification('⏱️ タイマー終了', '設定した時間が経過しました！');
-        }
+    const state = modesState[currentMode];
+    if (!state.isRunning) return;
+
+    const now = Date.now();
+
+    if (currentMode === 'stopwatch') {
+      state.time = Math.floor((now - state.startTime) / 1000);
+    } else {
+      const remaining = Math.ceil((state.endTime - now) / 1000);
+      if (remaining <= 0) {
+        state.time = 0;
+        state.isRunning = false;
+        handleTimerFinished();
+      } else {
+        state.time = remaining;
       }
     }
-
-    if (modesState.stopwatch.isRunning) {
-      modesState.stopwatch.time++;
-    }
-
-    if (modesState.pomodoro.isRunning) {
-      if (modesState.pomodoro.time > 0) {
-        modesState.pomodoro.time--;
-        if (modesState.pomodoro.time === 0) {
-          modesState.pomodoro.isRunning = false;
-          playSound('pomodoro');
-
-          if (modesState.pomodoro.stage === 'work') {
-            const workSec = parseTimeToSeconds(config.pomo.work);
-            config.pomoTotalSec = (config.pomoTotalSec || 0) + workSec;
-            document.getElementById('pomo-count-val').textContent = formatPomoTime(config.pomoTotalSec);
-            saveConfigToStorage();
-            sendDesktopNotification('🍅 作業時間終了！', 'お疲れ様でした。休憩に入りましょう！');
-          } else {
-            sendDesktopNotification('☕ 休憩終了！', 'リフレッシュ完了です。次の作業を始めましょう！');
-          }
-
-          modesState.pomodoro.stage = (modesState.pomodoro.stage === 'work') ? 'break' : 'work';
-          modesState.pomodoro.time = parseTimeToSeconds(config.pomo[modesState.pomodoro.stage]);
-          modesState.pomodoro.initialTime = modesState.pomodoro.time;
-        }
-      }
-    }
-
     updateUI();
-  }, 1000);
+  }, 500);
 
   loadConfig();
   switchMode('timer');
