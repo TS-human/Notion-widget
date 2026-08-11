@@ -1034,6 +1034,10 @@
       playSound('timer');
       sendDesktopNotification('⏱️ タイマー終了', '設定した時間が経過しました！');
       document.title = '【⏰終了！】タイマー';
+      
+      // 終了後、元のセット時間へ自動リセット
+      modesState.timer.time = modesState.timer.initialTime;
+      updateUI();
     } else if (currentMode === 'pomodoro') {
       playSound('pomodoro');
       if (modesState.pomodoro.stage === 'work') {
@@ -1051,6 +1055,7 @@
       modesState.pomodoro.stage = (modesState.pomodoro.stage === 'work') ? 'break' : 'work';
       modesState.pomodoro.time = parseTimeToSeconds(config.pomo[modesState.pomodoro.stage]);
       modesState.pomodoro.initialTime = modesState.pomodoro.time;
+      updateUI();
     }
   }
 
