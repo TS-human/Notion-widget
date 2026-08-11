@@ -338,6 +338,15 @@
       display: block;
       font-weight: 600;
     }
+    .checkbox-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
     select, input[type="text"], input[type="number"], textarea {
       width: 100%;
       padding: 6px;
@@ -402,8 +411,8 @@
     <span class="sets-badge" id="interval-sets-badge">1 / 8</span>
   </div>
 
-  <div class="display" id="time-display" onclick="handleDisplayClick()">05:00</div>
-  <input class="display-input hidden" id="time-display-input" type="text" onkeydown="handleDisplayInputKey(event)" onblur="saveDisplayEdit()">
+  <div class="display" id="time-display" onclick="handleDisplayClick()" title="クリックして時間を入力">05:00</div>
+  <input class="display-input hidden" id="time-display-input" type="text" placeholder="例: 1:30, 45, 2m" onkeydown="handleDisplayInputKey(event)" onblur="saveDisplayEdit()">
 
   <div class="slider-container" id="slider-group">
     <div class="slider-header">
@@ -437,15 +446,15 @@
 
       <div class="modal-grid">
         <div class="modal-field">
-          <label>準備時間</label>
+          <label>準備時間 (例: 5秒 / 0:05)</label>
           <input type="text" id="modal-prep-input" placeholder="0:05">
         </div>
         <div class="modal-field">
-          <label>運動時間</label>
+          <label>運動時間 (例: 20秒 / 0:20)</label>
           <input type="text" id="modal-work-input" placeholder="0:20">
         </div>
         <div class="modal-field">
-          <label>休憩時間</label>
+          <label>休憩時間 (例: 10秒 / 0:10)</label>
           <input type="text" id="modal-rest-input" placeholder="0:10">
         </div>
         <div class="modal-field">
@@ -463,6 +472,15 @@
     <div class="settings-title">
       <span>⚙️ 設定カスタマイズ</span>
       <button class="icon-btn" onclick="toggleSettings()">✖</button>
+    </div>
+
+    <!-- デスクトップ通知設定 -->
+    <div class="setting-group">
+      <label class="checkbox-label">
+        <input type="checkbox" id="notification-toggle" onchange="toggleNotificationPermission(this.checked)">
+        <span>🔔 デスクトップ通知を有効化</span>
+      </label>
+      <div id="notification-status-text" style="font-size: 9px; color: var(--sub-text); margin-top: 2px;"></div>
     </div>
 
     <!-- 1. 音量調整 -->
@@ -556,6 +574,7 @@
 
   let config = {
     volume: 0.8,
+    enableNotification: false,
     timerPresets: ["0:30", "1:00", "3:00", "5:00", "10:00", "15:00"],
     intervalPresets: [
       { name: 'タバタ', prep: "0:05", work: "0:20", rest: "0:10", sets: 8 },
@@ -571,20 +590,16 @@
     }
   };
 
-  function parseTimeToSeconds(input, isInterval = false) {
+  /**
+   * 改善版: 分数・秒数の入力を柔軟にパースする関数
+   * 対応表記: "1:30", "90", "45s", "45秒", "2m", "2分", "1分30秒", "1.5"
+   */
+  function parseTimeToSeconds(input) {
     if (typeof input === 'number') return input;
-    const str = String(input).trim();
+    const str = String(input).trim().toLowerCase();
     if (!str) return 0;
 
-    if (str.includes('分') || str.includes('秒')) {
-      let m = 0, s = 0;
-      const mMatch = str.match(/(\d+)\s*分/);
-      const sMatch = str.match(/(\d+)\s*秒/);
-      if (mMatch) m = parseInt(mMatch[1], 10);
-      if (sMatch) s = parseInt(sMatch[1], 10);
-      return m * 60 + s;
-    }
-
+    // 1. コロン形式 (mm:ss または m:s)
     if (str.includes(':')) {
       const parts = str.split(':');
       const m = parseInt(parts[0], 10) || 0;
@@ -592,10 +607,37 @@
       return m * 60 + s;
     }
 
+    // 2. 「分」「m」および「秒」「s」単位の解析
+    let minutes = 0;
+    let seconds = 0;
+    let hasUnit = false;
+
+    const mMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:分|m(?!s))/i);
+    if (mMatch) {
+      minutes = parseFloat(mMatch[1]);
+      hasUnit = true;
+    }
+
+    const sMatch = str.match(/(\d+)\s*(?:秒|s)/i);
+    if (sMatch) {
+      seconds = parseInt(sMatch[1], 10);
+      hasUnit = true;
+    }
+
+    if (hasUnit) {
+      return Math.round(minutes * 60 + seconds);
+    }
+
+    // 3. 小数入力（例: 1.5 -> 1.5分 = 90秒）
+    if (str.includes('.')) {
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : Math.round(num * 60);
+    }
+
+    // 4. 数字のみの場合：筋トレ・タイマーの用途として直感的な「秒数」として解釈
     const num = parseInt(str, 10);
     if (isNaN(num)) return 0;
-    if (isInterval) return num;
-    return num > 60 ? num : num * 60;
+    return num;
   }
 
   function formatPresetLabel(sec) {
@@ -603,6 +645,55 @@
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return s === 0 ? `${m}分` : `${m}分${s}秒`;
+  }
+
+  function sendDesktopNotification(title, body) {
+    if (!config.enableNotification) return;
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(title, {
+          body: body,
+          icon: "⏱️"
+        });
+      } catch (e) {}
+    }
+  }
+
+  function toggleNotificationPermission(enabled) {
+    config.enableNotification = enabled;
+    const statusEl = document.getElementById('notification-status-text');
+
+    if (enabled) {
+      if (!("Notification" in window)) {
+        statusEl.textContent = "※このブラウザは通知をサポートしていません。";
+        config.enableNotification = false;
+        document.getElementById('notification-toggle').checked = false;
+        return;
+      }
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            statusEl.textContent = "✓ デスクトップ通知が有効です";
+          } else {
+            statusEl.textContent = "※通知の許可が拒否されました";
+            config.enableNotification = false;
+            document.getElementById('notification-toggle').checked = false;
+          }
+          saveConfigToStorage();
+        });
+        return;
+      } else if (Notification.permission === "denied") {
+        statusEl.textContent = "※ブラウザ設定で通知がブロックされています";
+        config.enableNotification = false;
+        document.getElementById('notification-toggle').checked = false;
+        return;
+      } else {
+        statusEl.textContent = "✓ デスクトップ通知が有効です";
+      }
+    } else {
+      statusEl.textContent = "通知は無効です";
+    }
+    saveConfigToStorage();
   }
 
   function triggerFlash() {
@@ -742,6 +833,12 @@
     document.getElementById('volume-slider').value = volPct;
     document.getElementById('vol-value-text').textContent = `${volPct}%`;
 
+    const notifyToggle = document.getElementById('notification-toggle');
+    notifyToggle.checked = !!config.enableNotification;
+    if (config.enableNotification && "Notification" in window) {
+      document.getElementById('notification-status-text').textContent = Notification.permission === 'granted' ? "✓ デスクトップ通知が有効です" : "";
+    }
+
     document.getElementById('preset-input').value = (config.timerPresets || []).join(', ');
     const intervalLines = (config.intervalPresets || []).map(p => `${p.name},${p.prep || '0:05'},${p.work},${p.rest},${p.sets}`).join('\n');
     document.getElementById('interval-presets-input').value = intervalLines;
@@ -813,9 +910,9 @@
   function applyIntervalPreset(p) {
     const st = modesState.interval;
     st.isRunning = false;
-    st.prepSec = parseTimeToSeconds(p.prep || '0:05', true);
-    st.workSec = parseTimeToSeconds(p.work, true);
-    st.restSec = parseTimeToSeconds(p.rest, true);
+    st.prepSec = parseTimeToSeconds(p.prep || '0:05');
+    st.workSec = parseTimeToSeconds(p.work);
+    st.restSec = parseTimeToSeconds(p.rest);
     st.totalSets = p.sets;
     st.currentSet = 1;
 
@@ -905,9 +1002,9 @@
 
   function saveModalEdit() {
     const st = modesState.interval;
-    st.prepSec = parseTimeToSeconds(document.getElementById('modal-prep-input').value, true);
-    st.workSec = parseTimeToSeconds(document.getElementById('modal-work-input').value, true);
-    st.restSec = parseTimeToSeconds(document.getElementById('modal-rest-input').value, true);
+    st.prepSec = parseTimeToSeconds(document.getElementById('modal-prep-input').value);
+    st.workSec = parseTimeToSeconds(document.getElementById('modal-work-input').value);
+    st.restSec = parseTimeToSeconds(document.getElementById('modal-rest-input').value);
 
     const setsVal = parseInt(document.getElementById('modal-sets-input').value, 10);
     if (!isNaN(setsVal) && setsVal > 0) st.totalSets = setsVal;
@@ -1028,6 +1125,7 @@
         st.time = 0;
         st.isRunning = false;
         triggerSound('finish');
+        sendDesktopNotification("インターバル完了！", "すべてのセットが終了しました。お疲れ様でした！");
       } else if (st.restSec > 0) {
         st.stage = 'rest';
         st.time = st.restSec;
@@ -1064,6 +1162,7 @@
         modesState.timer.time = 0;
         modesState.timer.isRunning = false;
         triggerSound('timer');
+        sendDesktopNotification("タイマー終了", "設定した時間が経過しました。");
       }
     }
 
