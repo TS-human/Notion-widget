@@ -59,7 +59,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .title-badge {
       font-size: 12px;
@@ -82,67 +82,55 @@
     }
     .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 
-    .total-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .status-tag {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--sub-text);
-    }
-    .status-tag.overtime { color: var(--overtime-color); }
-    .session-badge {
-      font-size: 11px;
-      font-weight: bold;
-      color: var(--accent-color);
-      background: rgba(82, 186, 147, 0.12);
-      padding: 3px 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.15s;
-    }
-    .session-badge:hover { background: rgba(82, 186, 147, 0.22); }
-
     .display {
-      font-size: 42px;
+      font-size: 46px;
       font-weight: 700;
       text-align: center;
       font-variant-numeric: tabular-nums;
-      margin: 4px 0 10px;
+      margin: 6px 0 12px;
       letter-spacing: -1px;
       border-radius: 8px;
       padding: 2px 0;
       display: flex;
       justify-content: center;
       align-items: center;
+      gap: 2px;
+      line-height: 1;
       transition: color 0.3s ease;
     }
     .display.overtime { color: var(--overtime-color); }
     .display-part {
       cursor: pointer;
       border-radius: 6px;
-      padding: 0 4px;
+      padding: 0 2px;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
       transition: background-color 0.15s, transform 0.1s;
     }
     .display-part:hover { background-color: rgba(0, 0, 0, 0.08); }
     .display-part:active { transform: scale(0.95); }
 
+    .time-sep {
+      opacity: 0.6;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+    }
+
     .display-edit-container {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 6px;
-      margin: 4px 0 10px;
+      gap: 4px;
+      margin: 6px 0 12px;
+      line-height: 1;
     }
     .display-edit-input {
-      font-size: 32px;
+      font-size: 38px;
       font-weight: 700;
       text-align: center;
+      font-variant-numeric: tabular-nums;
       width: 72px;
       border: 2px solid var(--accent-color);
       border-radius: 8px;
@@ -152,24 +140,14 @@
       outline: none;
       font-family: inherit;
       padding: 2px 0;
-      -moz-appearance: textfield;
     }
     .display-edit-input::-webkit-outer-spin-button,
-    .display-edit-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-
-    .slider-container { margin-bottom: 10px; }
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--sub-text);
-      margin-bottom: 4px;
+    .display-edit-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
-    input[type="range"] {
-      width: 100%;
-      accent-color: var(--accent-color);
-      cursor: pointer;
+    .display-edit-input[type=number] {
+      -moz-appearance: textfield;
     }
 
     .preset-section-title {
@@ -264,6 +242,12 @@
       font-size: 11px;
       box-sizing: border-box;
     }
+    input[type="range"] {
+      width: 100%;
+      margin-top: 4px;
+      cursor: pointer;
+      accent-color: var(--accent-color);
+    }
     .notification-row {
       display: flex;
       align-items: center;
@@ -299,34 +283,18 @@
     </button>
   </div>
 
-  <!-- ステータス & 累計時間 -->
-  <div class="total-bar">
-    <span class="status-tag" id="status-tag">READY</span>
-    <span class="session-badge" id="session-badge" onclick="resetTotalMeditationTime()" title="クリックで累計時間をリセット">
-      累計: <span id="total-time-val">0分</span>
-    </span>
-  </div>
-
   <!-- 時間表示 -->
   <div class="display" id="time-display">
     <span class="display-part" id="display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』を編集">10</span>
-    <span class="display-colon">:</span>
+    <span class="time-sep">:</span>
     <span class="display-part" id="display-sec" onclick="enableDisplayEdit('sec')" title="クリックして『秒』を編集">00</span>
   </div>
   
   <!-- 分・秒編集インプット -->
   <div class="display-edit-container hidden" id="display-edit-container">
-    <input class="display-edit-input" id="edit-min-input" type="number" min="0" max="999" placeholder="分" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
-    <span style="font-size:32px; font-weight:700;">:</span>
-    <input class="display-edit-input" id="edit-sec-input" type="number" min="0" max="59" placeholder="秒" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
-  </div>
-
-  <!-- スライダー調整 -->
-  <div class="slider-container" id="slider-group">
-    <div class="slider-header">
-      <span>スライダー調整</span>
-    </div>
-    <input type="range" id="time-slider" min="1" max="60" value="10" oninput="onSliderChange(this.value)">
+    <input class="display-edit-input" id="edit-min-input" type="number" min="0" max="999" placeholder="00" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
+    <span class="time-sep" style="font-size:32px; font-weight:700;">:</span>
+    <input class="display-edit-input" id="edit-sec-input" type="number" min="0" max="59" placeholder="00" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
   </div>
 
   <!-- テンプレート -->
@@ -374,6 +342,12 @@
       </div>
     </div>
 
+    <!-- テンプレート -->
+    <div class="setting-group">
+      <label class="setting-label">タイマー テンプレート (カンマ区切り)</label>
+      <input type="text" id="preset-input" placeholder="5:00, 10:00, 15:00, 20:00, 30:00, 45:00">
+    </div>
+
     <!-- デスクトップ通知 -->
     <div class="setting-group">
       <div class="setting-label" style="display:flex; justify-content:space-between; align-items:center;">
@@ -387,12 +361,6 @@
         </label>
         <button class="sub-btn" id="noti-perm-btn" style="padding:4px 8px; font-size:10px;" onclick="requestNotificationPermission()">許可する</button>
       </div>
-    </div>
-
-    <!-- テンプレート -->
-    <div class="setting-group">
-      <label class="setting-label">タイマー テンプレート (カンマ区切り)</label>
-      <input type="text" id="preset-input" value="5:00, 10:00, 15:00, 20:00, 30:00, 45:00">
     </div>
 
     <!-- カスタム音声ファイル -->
@@ -431,7 +399,6 @@
   let config = {
     volume: 0.8,
     enableNotification: true,
-    totalMeditationSec: 0,
     customSound: '',
     customIntervalSound: '',
     presets: ["5:00", "10:00", "15:00", "20:00", "30:00", "45:00"],
@@ -461,14 +428,6 @@
       m: String(m).padStart(2, '0'),
       s: String(s).padStart(2, '0')
     };
-  }
-
-  function formatTotalTime(totalSec) {
-    const mins = Math.floor(totalSec / 60);
-    if (mins < 60) return `${mins}分`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m === 0 ? `${h}時間` : `${h}時間${m}分`;
   }
 
   // 終了音（重厚なボウル音）
@@ -623,7 +582,6 @@
     const volPct = Math.round((config.volume ?? 0.8) * 100);
     document.getElementById('volume-slider').value = volPct;
     document.getElementById('vol-value-text').textContent = `${volPct}%`;
-    document.getElementById('total-time-val').textContent = formatTotalTime(config.totalMeditationSec || 0);
 
     document.getElementById('interval-sound-toggle').checked = config.intervalSoundEnabled !== false;
     document.getElementById('interval-minutes-input').value = config.intervalMinutes || 10;
@@ -685,17 +643,11 @@
     intervalAudio.volume = config.volume;
   }
 
-  function resetTotalMeditationTime() {
-    if (confirm('累計瞑想時間をリセットしますか？')) {
-      config.totalMeditationSec = 0;
-      document.getElementById('total-time-val').textContent = '0分';
-      saveConfigToStorage();
-    }
-  }
-
   function toggleSettings() {
-    document.getElementById('settings-panel').classList.toggle('active');
-    if (document.getElementById('settings-panel').classList.contains('active')) {
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('active');
+    if (panel.classList.contains('active')) {
+      document.getElementById('preset-input').value = (config.presets || []).join(', ');
       updateNotificationUI();
     }
   }
@@ -705,12 +657,15 @@
     container.innerHTML = '';
     (config.presets || []).forEach(valStr => {
       const sec = parseTimeToSeconds(valStr);
+      if (sec <= 0) return;
+
       const btn = document.createElement('button');
       btn.className = 'preset-btn';
       if (sec === targetSec && !isRunning) btn.classList.add('active');
       
       const m = Math.floor(sec / 60);
-      btn.textContent = `${m}分`;
+      const s = sec % 60;
+      btn.textContent = s > 0 ? `${m}分${s}秒` : `${m}分`;
       btn.onclick = () => setPresetSeconds(sec);
       container.appendChild(btn);
     });
@@ -726,7 +681,6 @@
     const remainingSec = targetSec - totalElapsed;
 
     const displayEl = document.getElementById('time-display');
-    const statusTag = document.getElementById('status-tag');
 
     // 中間音（インターバル音）の判定処理
     if (isRunning && config.intervalSoundEnabled && config.intervalMinutes > 0) {
@@ -745,8 +699,6 @@
       const parts = formatTimeParts(totalElapsed);
       
       displayEl.classList.add('overtime');
-      statusTag.classList.add('overtime');
-      statusTag.textContent = 'OVERTIME';
 
       document.getElementById('display-min').textContent = parts.m;
       document.getElementById('display-sec').textContent = parts.s;
@@ -763,8 +715,6 @@
       const parts = formatTimeParts(remainingSec);
 
       displayEl.classList.remove('overtime');
-      statusTag.classList.remove('overtime');
-      statusTag.textContent = isRunning ? 'MEDITATING' : 'READY';
 
       document.getElementById('display-min').textContent = parts.m;
       document.getElementById('display-sec').textContent = parts.s;
@@ -790,7 +740,6 @@
       accumulatedSec = getRealTimeElapsed();
       isRunning = false;
       clearInterval(timerInterval);
-      document.getElementById('status-tag').textContent = 'PAUSED';
     } else {
       startTime = Date.now();
       isRunning = true;
@@ -806,13 +755,6 @@
   function resetTimer() {
     if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
       saveDisplayEdit();
-    }
-
-    const totalElapsed = getRealTimeElapsed();
-    if (totalElapsed >= 10) {
-      config.totalMeditationSec = (config.totalMeditationSec || 0) + totalElapsed;
-      document.getElementById('total-time-val').textContent = formatTotalTime(config.totalMeditationSec);
-      saveConfigToStorage();
     }
 
     if (isRunning) {
@@ -838,16 +780,8 @@
     hasRung = false;
     lastIntervalIndex = 0;
 
-    const mins = Math.max(1, Math.round(sec / 60));
-    document.getElementById('time-slider').value = Math.min(60, mins);
-
     updateDisplay();
     renderPresets();
-  }
-
-  function onSliderChange(val) {
-    const sec = parseInt(val, 10) * 60;
-    setPresetSeconds(sec);
   }
 
   function handleInputSelect(inputEl) {
