@@ -156,12 +156,19 @@
       align-items: center;
       gap: 2px;
       cursor: pointer;
+      line-height: 1;
     }
     .time-part {
       padding: 0 2px;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
     }
     .time-sep {
       opacity: 0.6;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
     }
 
     .display-input-container {
@@ -170,6 +177,7 @@
       align-items: center;
       gap: 4px;
       margin: 4px 0 10px;
+      line-height: 1;
     }
     .unit-input {
       font-size: 38px;
@@ -193,21 +201,6 @@
     }
     .unit-input[type=number] {
       -moz-appearance: textfield;
-    }
-
-    .slider-container { margin-bottom: 10px; }
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--sub-text);
-      margin-bottom: 4px;
-    }
-    input[type="range"] {
-      width: 100%;
-      accent-color: var(--accent-color);
-      cursor: pointer;
     }
     
     .preset-section-title {
@@ -438,13 +431,6 @@
     <input class="unit-input" id="input-min" type="number" min="0" max="999" placeholder="00" onkeydown="handleDisplayInputKey(event)" onblur="handleInputBlur(event)" onfocus="selectInputText(this)">
     <span class="time-sep" style="font-size:32px; font-weight:700;">:</span>
     <input class="unit-input" id="input-sec" type="number" min="0" max="59" placeholder="00" onkeydown="handleDisplayInputKey(event)" onblur="handleInputBlur(event)" onfocus="selectInputText(this)">
-  </div>
-
-  <div class="slider-container" id="slider-group">
-    <div class="slider-header">
-      <span>スライダー調整</span>
-    </div>
-    <input type="range" id="time-slider" min="1" max="60" value="5" oninput="onSliderChange(this.value)">
   </div>
 
   <div id="timer-presets-section">
@@ -1128,7 +1114,6 @@
       document.getElementById(`tab-${m}`).classList.toggle('active', mode === m);
     });
 
-    document.getElementById('slider-group').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('timer-presets-section').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('interval-presets-section').classList.toggle('hidden', mode !== 'interval');
     document.getElementById('interval-info-bar').classList.toggle('hidden', mode !== 'interval');
@@ -1136,20 +1121,7 @@
     updateUI();
   }
 
-  function onSliderChange(val) {
-    const sec = parseInt(val, 10) * 60;
-    const state = modesState.timer;
-    if (!state.isRunning) {
-      state.time = sec;
-      state.initialTime = sec;
-      if (currentMode === 'timer') updateUI();
-    }
-  }
-
   function setPresetSeconds(sec) {
-    const mins = Math.max(1, Math.round(sec / 60));
-    document.getElementById('time-slider').value = Math.min(60, mins);
-    
     const state = modesState.timer;
     if (!state.isRunning) {
       state.time = sec;
