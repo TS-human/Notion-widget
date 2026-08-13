@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notion Meditation Timer</title>
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #37352f;
+      --card-bg: #f7f6f3;
+      --accent-color: #48a981;
+      --overtime-color: #d97706;
+      --border-color: #e9e9e7;
+      --sub-text: #787774;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #191919;
+        --text-color: rgba(255, 255, 255, 0.81);
+        --card-bg: #202020;
+        --accent-color: #52ba93;
+        --overtime-color: #f59e0b;
+        --border-color: #2f2f2f;
+        --sub-text: #9b9b9b;
+      }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .widget-container {
+      width: 100%;
+      max-width: 340px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      position: relative;
+      transition: background-color 0.2s;
+    }
+
+    @keyframes flash-anim {
+      0%, 100% { background-color: var(--card-bg); }
+      50% { background-color: rgba(82, 186, 147, 0.25); }
+    }
+    .flash { animation: flash-anim 0.6s ease-in-out 2; }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .title-badge {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--sub-text);
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      opacity: 0.75;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+
+    .total-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .status-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--sub-text);
+    }
+    .status-tag.overtime { color: var(--overtime-color); }
+    .session-badge {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--accent-color);
+      background: rgba(82, 186, 147, 0.12);
+      padding: 3px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .session-badge:hover { background: rgba(82, 186, 147, 0.22); }
+
+    .display {
+      font-size: 42px;
+      font-weight: 700;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      margin: 4px 0 10px;
+      letter-spacing: -1px;
+      border-radius: 8px;
+      padding: 2px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: color 0.3s ease;
+    }
+    .display.overtime { color: var(--overtime-color); }
+    .display-part {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 0 4px;
+      transition: background-color 0.15s, transform 0.1s;
+    }
+    .display-part:hover { background-color: rgba(0, 0, 0, 0.08); }
+    .display-part:active { transform: scale(0.95); }
+
+    .display-edit-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0 10px;
+    }
+    .display-edit-input {
+      font-size: 32px;
+      font-weight: 700;
+      text-align: center;
+      width: 72px;
+      border: 2px solid var(--accent-color);
+      border-radius: 8px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+      padding: 2px 0;
+      -moz-appearance: textfield;
+    }
+    .display-edit-input::-webkit-outer-spin-button,
+    .display-edit-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .slider-container { margin-bottom: 10px; }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--sub-text);
+      margin-bottom: 4px;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-color);
+      cursor: pointer;
+    }
+
+    .preset-section-title {
+      font-size: 10px;
+      color: var(--sub-text);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .preset-btn {
+      padding: 6px 0;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover, .preset-btn.active {
+      background: rgba(0,0,0,0.05);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .controls { display: flex; gap: 8px; }
+    .main-btn {
+      flex: 2;
+      padding: 8px;
+      border: none;
+      background: var(--accent-color);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .sub-btn {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .settings-panel {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 14px;
+      box-sizing: border-box;
+      z-index: 10;
+      overflow-y: auto;
+    }
+    .settings-panel.active { display: block; }
+    .settings-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-group { margin-bottom: 12px; }
+    .setting-label {
+      font-size: 11px;
+      color: var(--sub-text);
+      margin-bottom: 4px;
+      display: block;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="number"], input[type="file"] {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 11px;
+      box-sizing: border-box;
+    }
+    .notification-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .notification-label-check {
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .shortcuts-hint {
+      font-size: 10px;
+      color: var(--sub-text);
+      border-top: 1px dashed var(--border-color);
+      padding-top: 8px;
+      margin-top: 10px;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="widget-container" id="widget-container">
+  <!-- ヘッダー -->
+  <div class="header-bar">
+    <div class="title-badge">瞑想タイマー</div>
+    <button class="icon-btn" onclick="toggleSettings()" title="設定">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+  </div>
+
+  <!-- ステータス & 累計時間 -->
+  <div class="total-bar">
+    <span class="status-tag" id="status-tag">READY</span>
+    <span class="session-badge" id="session-badge" onclick="resetTotalMeditationTime()" title="クリックで累計時間をリセット">
+      累計: <span id="total-time-val">0分</span>
+    </span>
+  </div>
+
+  <!-- 時間表示 -->
+  <div class="display" id="time-display">
+    <span class="display-part" id="display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』を編集">10</span>
+    <span class="display-colon">:</span>
+    <span class="display-part" id="display-sec" onclick="enableDisplayEdit('sec')" title="クリックして『秒』を編集">00</span>
+  </div>
+  
+  <!-- 分・秒編集インプット -->
+  <div class="display-edit-container hidden" id="display-edit-container">
+    <input class="display-edit-input" id="edit-min-input" type="number" min="0" max="999" placeholder="分" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
+    <span style="font-size:32px; font-weight:700;">:</span>
+    <input class="display-edit-input" id="edit-sec-input" type="number" min="0" max="59" placeholder="秒" onfocus="handleInputSelect(this)" onclick="handleInputSelect(this)" onkeydown="handleDisplayInputKey(event)" onblur="handleDisplayBlur()">
+  </div>
+
+  <!-- スライダー調整 -->
+  <div class="slider-container" id="slider-group">
+    <div class="slider-header">
+      <span>スライダー調整</span>
+    </div>
+    <input type="range" id="time-slider" min="1" max="60" value="10" oninput="onSliderChange(this.value)">
+  </div>
+
+  <!-- テンプレート -->
+  <div id="presets-section">
+    <div class="preset-section-title">タイマー テンプレート</div>
+    <div class="preset-grid" id="presets-group"></div>
+  </div>
+
+  <!-- 操作ボタン -->
+  <div class="controls">
+    <button class="main-btn" id="start-btn" onclick="toggleStart()">スタート</button>
+    <button class="sub-btn" id="reset-btn" onclick="resetTimer()">リセット</button>
+  </div>
+
+  <!-- 設定パネル -->
+  <div class="settings-panel" id="settings-panel">
+    <div class="settings-title">
+      <span>設定カスタマイズ</span>
+      <button class="icon-btn" onclick="toggleSettings()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <!-- 音量 -->
+    <div class="setting-group">
+      <div class="setting-label" style="display:flex; justify-content:space-between;">
+        <span>通知音量</span>
+        <span id="vol-value-text">80%</span>
+      </div>
+      <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="onVolumeChange(this.value)">
+    </div>
+
+    <!-- 中間音（インターバル音）設定 -->
+    <div class="setting-group">
+      <label class="setting-label">中間音（インターバル音）</label>
+      <div class="notification-row" style="margin-bottom:6px;">
+        <label class="notification-label-check">
+          <input type="checkbox" id="interval-sound-toggle" style="width:auto;" onchange="onIntervalToggle(this.checked)">
+          <span>経過時に音を鳴らす</span>
+        </label>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <input type="number" id="interval-minutes-input" min="1" max="180" value="10" style="width:80px;" onchange="onIntervalMinutesChange(this.value)">
+        <span style="font-size:11px; color:var(--sub-text);">分ごと</span>
+      </div>
+    </div>
+
+    <!-- デスクトップ通知 -->
+    <div class="setting-group">
+      <div class="setting-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>デスクトップ通知</span>
+        <span id="noti-status" style="font-size:10px; font-weight:normal; color:var(--sub-text);">確認中...</span>
+      </div>
+      <div class="notification-row">
+        <label class="notification-label-check">
+          <input type="checkbox" id="noti-toggle" style="width:auto;" onchange="onNotificationToggle(this.checked)">
+          <span>通知を有効化</span>
+        </label>
+        <button class="sub-btn" id="noti-perm-btn" style="padding:4px 8px; font-size:10px;" onclick="requestNotificationPermission()">許可する</button>
+      </div>
+    </div>
+
+    <!-- テンプレート -->
+    <div class="setting-group">
+      <label class="setting-label">タイマー テンプレート (カンマ区切り)</label>
+      <input type="text" id="preset-input" value="5:00, 10:00, 15:00, 20:00, 30:00, 45:00">
+    </div>
+
+    <!-- カスタム音声ファイル -->
+    <div class="setting-group" style="border-top: 1px dashed var(--border-color); padding-top: 10px;">
+      <label class="setting-label">カスタム終了音声ファイル (任意)</label>
+      <input type="file" accept="audio/*" onchange="handleAudioUpload(event)">
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">カスタム中間音声ファイル (任意)</label>
+      <input type="file" accept="audio/*" onchange="handleIntervalAudioUpload(event)">
+    </div>
+
+    <div class="shortcuts-hint">
+      <strong>ショートカット</strong><br>
+      • [Space]: スタート / 一時停止<br>
+      • [R]: リセット
+    </div>
+
+    <button class="main-btn" style="width:100%; margin-top:12px;" onclick="saveSettings()">設定を保存</button>
+  </div>
+</div>
+
+<script>
+  let targetSec = 600;      // 目標時間（秒）
+  let initialTargetSec = 600;
+  let accumulatedSec = 0;   // 実測経過秒数
+  let isRunning = false;
+  let hasRung = false;      // 到達ベル演奏済みフラグ
+  let lastIntervalIndex = 0;// 最後に中間音を鳴らした区切りインデックス
+  let startTime = null;
+  let timerInterval = null;
+
+  const audio = new Audio();
+  const intervalAudio = new Audio();
+
+  let config = {
+    volume: 0.8,
+    enableNotification: true,
+    totalMeditationSec: 0,
+    customSound: '',
+    customIntervalSound: '',
+    presets: ["5:00", "10:00", "15:00", "20:00", "30:00", "45:00"],
+    intervalSoundEnabled: true,
+    intervalMinutes: 10
+  };
+
+  function parseTimeToSeconds(input) {
+    if (typeof input === 'number') return input;
+    const str = String(input).trim();
+    if (!str) return 0;
+
+    if (str.includes(':')) {
+      const parts = str.split(':');
+      const m = parseInt(parts[0], 10) || 0;
+      const s = parseInt(parts[1], 10) || 0;
+      return m * 60 + s;
+    }
+    const num = parseInt(str, 10);
+    return isNaN(num) ? 0 : num * 60;
+  }
+
+  function formatTimeParts(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return {
+      m: String(m).padStart(2, '0'),
+      s: String(s).padStart(2, '0')
+    };
+  }
+
+  function formatTotalTime(totalSec) {
+    const mins = Math.floor(totalSec / 60);
+    if (mins < 60) return `${mins}分`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m === 0 ? `${h}時間` : `${h}時間${m}分`;
+  }
+
+  // 終了音（重厚なボウル音）
+  function playGongSound() {
+    triggerFlash();
+    if (audio.src && audio.src.startsWith('data:audio')) {
+      audio.volume = config.volume;
+      audio.currentTime = 0;
+      audio.play().catch(() => playBowlTone());
+      return;
+    }
+    playBowlTone();
+  }
+
+  function playBowlTone() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const now = ctx.currentTime;
+      const harmonics = [288, 576, 864, 1152];
+      
+      harmonics.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        const baseVol = (config.volume || 0.8) * (1 / (idx + 1)) * 0.4;
+        gain.gain.setValueAtTime(baseVol, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 3.5);
+      });
+    } catch(e) {}
+  }
+
+  // 中間音再生処理
+  function playIntervalTone() {
+    if (intervalAudio.src && intervalAudio.src.startsWith('data:audio')) {
+      intervalAudio.volume = config.volume;
+      intervalAudio.currentTime = 0;
+      intervalAudio.play().catch(() => playDefaultIntervalTone());
+      return;
+    }
+    playDefaultIntervalTone();
+  }
+
+  function playDefaultIntervalTone() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1046.5, now); // C6音
+
+      const baseVol = (config.volume || 0.8) * 0.35;
+      gain.gain.setValueAtTime(baseVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 2.0);
+    } catch(e) {}
+  }
+
+  function triggerFlash() {
+    const el = document.getElementById('widget-container');
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1200);
+  }
+
+  function updateNotificationUI() {
+    const btn = document.getElementById('noti-perm-btn');
+    const status = document.getElementById('noti-status');
+    const toggle = document.getElementById('noti-toggle');
+
+    toggle.checked = !!config.enableNotification;
+
+    if (!('Notification' in window)) {
+      status.textContent = '非対応';
+      btn.style.display = 'none';
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      status.textContent = '許可済み';
+      btn.textContent = 'テスト通知';
+      btn.onclick = () => sendDesktopNotification('瞑想完了', 'デスクトップ通知は正常に動作しています。');
+    } else if (Notification.permission === 'denied') {
+      status.textContent = 'ブラウザで拒否中';
+      btn.textContent = '設定方法';
+      btn.onclick = () => alert('ブラウザの設定から通知権限を許可してください。');
+    } else {
+      status.textContent = '未許可';
+      btn.textContent = '許可する';
+      btn.onclick = requestNotificationPermission;
+    }
+  }
+
+  function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    Notification.requestPermission().then(() => updateNotificationUI());
+  }
+
+  function onNotificationToggle(checked) {
+    config.enableNotification = checked;
+    if (checked && 'Notification' in window && Notification.permission === 'default') {
+      requestNotificationPermission();
+    }
+    saveConfigToStorage();
+  }
+
+  function onIntervalToggle(checked) {
+    config.intervalSoundEnabled = checked;
+    saveConfigToStorage();
+  }
+
+  function onIntervalMinutesChange(val) {
+    let m = parseInt(val, 10);
+    if (isNaN(m) || m < 1) m = 1;
+    config.intervalMinutes = m;
+    saveConfigToStorage();
+  }
+
+  function sendDesktopNotification(title, body) {
+    if (!config.enableNotification) return;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, { body: body, tag: 'notion-meditation-alert', requireInteraction: true });
+      } catch (e) {}
+    }
+  }
+
+  function loadConfig() {
+    try {
+      const saved = localStorage.getItem('notion_meditation_timer_config_v2');
+      if (saved) config = { ...config, ...JSON.parse(saved) };
+    } catch(e) {}
+
+    if (config.customSound) audio.src = config.customSound;
+    if (config.customIntervalSound) intervalAudio.src = config.customIntervalSound;
+
+    const volPct = Math.round((config.volume ?? 0.8) * 100);
+    document.getElementById('volume-slider').value = volPct;
+    document.getElementById('vol-value-text').textContent = `${volPct}%`;
+    document.getElementById('total-time-val').textContent = formatTotalTime(config.totalMeditationSec || 0);
+
+    document.getElementById('interval-sound-toggle').checked = config.intervalSoundEnabled !== false;
+    document.getElementById('interval-minutes-input').value = config.intervalMinutes || 10;
+
+    document.getElementById('preset-input').value = (config.presets || []).join(', ');
+
+    renderPresets();
+    updateNotificationUI();
+  }
+
+  function saveConfigToStorage() {
+    try {
+      localStorage.setItem('notion_meditation_timer_config_v2', JSON.stringify(config));
+    } catch(e) {}
+  }
+
+  function saveSettings() {
+    const pInput = document.getElementById('preset-input').value;
+    config.presets = pInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+    const intVal = parseInt(document.getElementById('interval-minutes-input').value, 10);
+    config.intervalMinutes = (!isNaN(intVal) && intVal > 0) ? intVal : 10;
+
+    saveConfigToStorage();
+    renderPresets();
+    toggleSettings();
+  }
+
+  function handleAudioUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        config.customSound = e.target.result;
+        audio.src = config.customSound;
+        saveConfigToStorage();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleIntervalAudioUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        config.customIntervalSound = e.target.result;
+        intervalAudio.src = config.customIntervalSound;
+        saveConfigToStorage();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function onVolumeChange(val) {
+    config.volume = parseFloat(val) / 100;
+    document.getElementById('vol-value-text').textContent = `${val}%`;
+    audio.volume = config.volume;
+    intervalAudio.volume = config.volume;
+  }
+
+  function resetTotalMeditationTime() {
+    if (confirm('累計瞑想時間をリセットしますか？')) {
+      config.totalMeditationSec = 0;
+      document.getElementById('total-time-val').textContent = '0分';
+      saveConfigToStorage();
+    }
+  }
+
+  function toggleSettings() {
+    document.getElementById('settings-panel').classList.toggle('active');
+    if (document.getElementById('settings-panel').classList.contains('active')) {
+      updateNotificationUI();
+    }
+  }
+
+  function renderPresets() {
+    const container = document.getElementById('presets-group');
+    container.innerHTML = '';
+    (config.presets || []).forEach(valStr => {
+      const sec = parseTimeToSeconds(valStr);
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      if (sec === targetSec && !isRunning) btn.classList.add('active');
+      
+      const m = Math.floor(sec / 60);
+      btn.textContent = `${m}分`;
+      btn.onclick = () => setPresetSeconds(sec);
+      container.appendChild(btn);
+    });
+  }
+
+  function getRealTimeElapsed() {
+    if (!isRunning) return accumulatedSec;
+    return accumulatedSec + Math.floor((Date.now() - startTime) / 1000);
+  }
+
+  function updateDisplay() {
+    const totalElapsed = getRealTimeElapsed();
+    const remainingSec = targetSec - totalElapsed;
+
+    const displayEl = document.getElementById('time-display');
+    const statusTag = document.getElementById('status-tag');
+
+    // 中間音（インターバル音）の判定処理
+    if (isRunning && config.intervalSoundEnabled && config.intervalMinutes > 0) {
+      const intervalSec = config.intervalMinutes * 60;
+      const currentIntervalIdx = Math.floor(totalElapsed / intervalSec);
+      if (currentIntervalIdx > lastIntervalIndex && totalElapsed > 0) {
+        lastIntervalIndex = currentIntervalIdx;
+        if (Math.abs(totalElapsed - targetSec) > 1) {
+          playIntervalTone();
+        }
+      }
+    }
+
+    if (remainingSec <= 0) {
+      // 超過モード：経過した【合計時間】を表示して色を変更
+      const parts = formatTimeParts(totalElapsed);
+      
+      displayEl.classList.add('overtime');
+      statusTag.classList.add('overtime');
+      statusTag.textContent = 'OVERTIME';
+
+      document.getElementById('display-min').textContent = parts.m;
+      document.getElementById('display-sec').textContent = parts.s;
+
+      document.title = `(${parts.m}:${parts.s}) 瞑想中...`;
+
+      if (!hasRung) {
+        hasRung = true;
+        playGongSound();
+        sendDesktopNotification('瞑想目標時間達成', '設定時間が経過しました。このまま瞑想を継続できます。');
+      }
+    } else {
+      // カウントダウンモード
+      const parts = formatTimeParts(remainingSec);
+
+      displayEl.classList.remove('overtime');
+      statusTag.classList.remove('overtime');
+      statusTag.textContent = isRunning ? 'MEDITATING' : 'READY';
+
+      document.getElementById('display-min').textContent = parts.m;
+      document.getElementById('display-sec').textContent = parts.s;
+
+      if (isRunning) {
+        document.title = `(${parts.m}:${parts.s}) 瞑想タイマー`;
+      } else {
+        document.title = `Notion Meditation Timer`;
+      }
+    }
+
+    const startBtn = document.getElementById('start-btn');
+    startBtn.textContent = isRunning ? '一時停止' : 'スタート';
+    startBtn.style.backgroundColor = isRunning ? '#e11d48' : 'var(--accent-color)';
+  }
+
+  function toggleStart() {
+    if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
+      saveDisplayEdit();
+    }
+
+    if (isRunning) {
+      accumulatedSec = getRealTimeElapsed();
+      isRunning = false;
+      clearInterval(timerInterval);
+      document.getElementById('status-tag').textContent = 'PAUSED';
+    } else {
+      startTime = Date.now();
+      isRunning = true;
+      timerInterval = setInterval(updateDisplay, 250);
+
+      if ('Notification' in window && Notification.permission === 'default') {
+        requestNotificationPermission();
+      }
+    }
+    updateDisplay();
+  }
+
+  function resetTimer() {
+    if (!document.getElementById('display-edit-container').classList.contains('hidden')) {
+      saveDisplayEdit();
+    }
+
+    const totalElapsed = getRealTimeElapsed();
+    if (totalElapsed >= 10) {
+      config.totalMeditationSec = (config.totalMeditationSec || 0) + totalElapsed;
+      document.getElementById('total-time-val').textContent = formatTotalTime(config.totalMeditationSec);
+      saveConfigToStorage();
+    }
+
+    if (isRunning) {
+      clearInterval(timerInterval);
+      isRunning = false;
+    }
+
+    accumulatedSec = 0;
+    hasRung = false;
+    lastIntervalIndex = 0;
+    targetSec = initialTargetSec;
+
+    updateDisplay();
+    renderPresets();
+  }
+
+  function setPresetSeconds(sec) {
+    if (isRunning) resetTimer();
+
+    targetSec = sec;
+    initialTargetSec = sec;
+    accumulatedSec = 0;
+    hasRung = false;
+    lastIntervalIndex = 0;
+
+    const mins = Math.max(1, Math.round(sec / 60));
+    document.getElementById('time-slider').value = Math.min(60, mins);
+
+    updateDisplay();
+    renderPresets();
+  }
+
+  function onSliderChange(val) {
+    const sec = parseInt(val, 10) * 60;
+    setPresetSeconds(sec);
+  }
+
+  function handleInputSelect(inputEl) {
+    setTimeout(() => inputEl.select(), 0);
+  }
+
+  function enableDisplayEdit(targetField = 'min') {
+    if (isRunning) toggleStart();
+
+    const remainingSec = Math.max(0, targetSec - accumulatedSec);
+    const parts = formatTimeParts(remainingSec);
+
+    const displayEl = document.getElementById('time-display');
+    const editContainer = document.getElementById('display-edit-container');
+    const minInput = document.getElementById('edit-min-input');
+    const secInput = document.getElementById('edit-sec-input');
+
+    minInput.value = parseInt(parts.m, 10);
+    secInput.value = parts.s;
+
+    displayEl.classList.add('hidden');
+    editContainer.classList.remove('hidden');
+
+    const focusTarget = (targetField === 'sec') ? secInput : minInput;
+    focusTarget.focus();
+    handleInputSelect(focusTarget);
+  }
+
+  function handleDisplayBlur() {
+    const editContainer = document.getElementById('display-edit-container');
+    setTimeout(() => {
+      if (!editContainer.contains(document.activeElement)) {
+        saveDisplayEdit();
+      }
+    }, 100);
+  }
+
+  function saveDisplayEdit() {
+    const displayEl = document.getElementById('time-display');
+    const editContainer = document.getElementById('display-edit-container');
+
+    if (editContainer.classList.contains('hidden')) return;
+
+    const minInput = document.getElementById('edit-min-input');
+    const secInput = document.getElementById('edit-sec-input');
+
+    let m = parseInt(minInput.value, 10);
+    let s = parseInt(secInput.value, 10);
+
+    if (isNaN(m) || m < 0) m = 0;
+    if (isNaN(s) || s < 0) s = 0;
+
+    if (s >= 60) {
+      m += Math.floor(s / 60);
+      s = s % 60;
+    }
+
+    const totalSec = m * 60 + s;
+    if (totalSec > 0) {
+      setPresetSeconds(totalSec);
+    }
+
+    editContainer.classList.add('hidden');
+    displayEl.classList.remove('hidden');
+    updateDisplay();
+  }
+
+  function handleDisplayInputKey(e) {
+    if (e.key === 'Enter') saveDisplayEdit();
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      toggleStart();
+    } else if (e.key === 'r' || e.key === 'R') {
+      resetTimer();
+    }
+  });
+
+  loadConfig();
+  updateDisplay();
+</script>
+
+</body>
+</html>
