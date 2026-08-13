@@ -1074,7 +1074,18 @@
   }, 500);
 
   loadConfig();
-  switchMode(config.currentMode || 'timer');
+
+  // 1. URLクエリ (?mode=pomodoro) または URLハッシュ (#pomodoro) からモードを取得
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramMode = urlParams.get('mode');
+  const hashMode = window.location.hash.replace('#', '');
+
+  // 2. 優先順位: URLパラメータ > URLハッシュ > localStorage > デフォルト('timer')
+  const initialMode = [paramMode, hashMode, config.currentMode].find(
+    m => ['timer', 'stopwatch', 'pomodoro'].includes(m)
+  ) || 'timer';
+
+  switchMode(initialMode);
 </script>
 
 </body>
