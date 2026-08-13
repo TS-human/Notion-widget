@@ -513,7 +513,7 @@
 
     <div class="setting-group">
       <label class="setting-label">インターバル テンプレート (改行: 名称,準備,運動,休憩,セット数)</label>
-      <textarea id="interval-presets-input" placeholder="タバタ, 0:05, 0:20, 0:10, 8&#10;筋トレ, 0:10, 0:45, 0:15, 4" onfocus="selectInputText(this)"></textarea>
+      <textarea id="interval-presets-input" placeholder="タバタ, 0:05, 0:20, 0:10, 8&#10;筋トレ自重, 0:10, 0:45, 0:15, 4" onfocus="selectInputText(this)"></textarea>
     </div>
 
     <div class="setting-group" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 12px;">
@@ -570,6 +570,7 @@
 
 <script>
   let currentMode = 'timer';
+  let audioCtx = null;
 
   const modesState = {
     timer: { time: 300, initialTime: 300, isRunning: false },
@@ -603,6 +604,15 @@
       finish: null
     }
   };
+
+  function initAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
 
   function selectInputText(el) {
     setTimeout(() => {
@@ -716,6 +726,7 @@
   }
 
   function triggerSound(type) {
+    initAudioContext();
     if (type !== 'countdown') {
       triggerFlash();
     }
@@ -735,15 +746,17 @@
 
   function playSynthBeep(type) {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const now = ctx.currentTime;
+      initAudioContext();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
 
       if (type === 'countdown') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
         osc.type = 'square';
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
         gain.gain.setValueAtTime(config.volume * 0.9, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
         osc.frequency.setValueAtTime(1200, now);
@@ -751,11 +764,11 @@
         osc.stop(now + 0.05);
       } else if (type === 'timer') {
         [0, 0.15, 0.3].forEach((t) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
           osc.type = 'square';
           osc.connect(gain);
-          gain.connect(ctx.destination);
+          gain.connect(audioCtx.destination);
           gain.gain.setValueAtTime(config.volume, now + t);
           gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.1);
           osc.frequency.setValueAtTime(1500, now + t);
@@ -764,11 +777,11 @@
         });
       } else if (type === 'work' || type === 'rest') {
         [0, 0.12].forEach((t) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
           osc.type = 'square';
           osc.connect(gain);
-          gain.connect(ctx.destination);
+          gain.connect(audioCtx.destination);
           gain.gain.setValueAtTime(config.volume, now + t);
           gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.08);
           osc.frequency.setValueAtTime(type === 'work' ? 1800 : 1300, now + t);
@@ -778,11 +791,11 @@
       } else if (type === 'finish') {
         const freqs = [1000, 1300, 1600, 2000];
         freqs.forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
           osc.type = 'square';
           osc.connect(gain);
-          gain.connect(ctx.destination);
+          gain.connect(audioCtx.destination);
           const startTime = now + idx * 0.09;
           gain.gain.setValueAtTime(config.volume, startTime);
           gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
@@ -838,6 +851,11 @@
     try {
       const saved = localStorage.getItem('notion_fitness_timer_config_v9');
       if (saved) config = { ...config, ...JSON.parse(saved) };
+      
+      const savedMode = localStorage.getItem('notion_fitness_timer_mode');
+      if (savedMode && ['timer', 'stopwatch', 'interval'].includes(savedMode)) {
+        currentMode = savedMode;
+      }
     } catch(e) {}
 
     const volPct = Math.round((config.volume ?? 0.8) * 100);
@@ -1102,6 +1120,10 @@
 
   function switchMode(mode) {
     currentMode = mode;
+    try {
+      localStorage.setItem('notion_fitness_timer_mode', mode);
+    } catch(e) {}
+
     ['timer', 'stopwatch', 'interval'].forEach(m => {
       document.getElementById(`tab-${m}`).classList.toggle('active', mode === m);
     });
@@ -1137,6 +1159,7 @@
   }
 
   function toggleStart() {
+    initAudioContext();
     saveDisplayEdit();
 
     const state = modesState[currentMode];
@@ -1212,14 +1235,16 @@
 
   setInterval(() => {
     if (modesState.timer.isRunning) {
-      if (modesState.timer.time > 1) {
+      if (modesState.timer.time > 0) {
         modesState.timer.time--;
-      } else {
-        // タイマー終了時に元の設定時間（initialTime）に戻す
-        modesState.timer.time = modesState.timer.initialTime;
+      }
+      
+      if (modesState.timer.time === 0) {
+        updateUI();
         modesState.timer.isRunning = false;
         triggerSound('timer');
         sendDesktopNotification("タイマー終了", "設定した時間が経過しました。");
+        modesState.timer.time = modesState.timer.initialTime;
       }
     }
 
@@ -1228,12 +1253,14 @@
     }
 
     if (modesState.interval.isRunning) {
-      if (modesState.interval.time > 1) {
+      if (modesState.interval.time > 0) {
         modesState.interval.time--;
-        if (modesState.interval.time <= 3) {
+        if (modesState.interval.time <= 3 && modesState.interval.time > 0) {
           triggerSound('countdown');
         }
-      } else {
+      }
+      
+      if (modesState.interval.time === 0) {
         advanceIntervalStage();
       }
     }
@@ -1242,7 +1269,7 @@
   }, 1000);
 
   loadConfig();
-  switchMode('timer');
+  switchMode(currentMode);
 </script>
 
 </body>
