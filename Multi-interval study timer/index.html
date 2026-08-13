@@ -134,12 +134,16 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      line-height: 1;
     }
     .display-part {
       cursor: pointer;
       border-radius: 6px;
       padding: 0 4px;
       transition: background-color 0.15s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
     }
     .display-part:hover {
       background-color: rgba(0, 0, 0, 0.08);
@@ -149,6 +153,10 @@
     }
     .display-colon {
       padding: 0 2px;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+      transform: translateY(-0.05em);
     }
 
     .display-edit-container {
@@ -157,6 +165,7 @@
       align-items: center;
       gap: 6px;
       margin: 4px 0 10px;
+      line-height: 1;
     }
     .display-edit-input {
       font-size: 32px;
@@ -182,16 +191,10 @@
       font-size: 32px;
       font-weight: 700;
       color: var(--text-color);
-    }
-
-    .slider-container { margin-bottom: 10px; }
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
+      display: inline-flex;
       align-items: center;
-      font-size: 11px;
-      color: var(--sub-text);
-      margin-bottom: 4px;
+      line-height: 1;
+      transform: translateY(-0.05em);
     }
 
     input[type="range"] {
@@ -388,13 +391,6 @@
       <span>ポモドーロ テンプレート</span>
     </div>
     <div class="preset-grid" id="pomo-presets-group"></div>
-  </div>
-
-  <div class="slider-container" id="slider-group">
-    <div class="slider-header">
-      <span>スライダー調整</span>
-    </div>
-    <input type="range" id="time-slider" min="1" max="60" value="5" oninput="onSliderChange(this.value)">
   </div>
 
   <div id="timer-presets-section">
@@ -822,7 +818,6 @@
       document.getElementById(`tab-${m}`).classList.toggle('active', mode === m);
     });
 
-    document.getElementById('slider-group').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('timer-presets-section').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('pomo-group').classList.toggle('hidden', mode !== 'pomodoro');
     document.getElementById('pomo-total-bar').classList.toggle('hidden', mode !== 'pomodoro');
@@ -914,20 +909,7 @@
     if (e.key === 'Enter') saveDisplayEdit();
   }
 
-  function onSliderChange(val) {
-    const sec = parseInt(val, 10) * 60;
-    const state = modesState.timer;
-    if (!state.isRunning) {
-      state.time = sec;
-      state.initialTime = sec;
-      if (currentMode === 'timer') updateUI();
-    }
-  }
-
   function setPresetSeconds(sec) {
-    const mins = Math.max(1, Math.round(sec / 60));
-    document.getElementById('time-slider').value = Math.min(60, mins);
-    
     const state = modesState.timer;
     if (!state.isRunning) {
       state.time = sec;
@@ -1075,12 +1057,10 @@
 
   loadConfig();
 
-  // 1. URLクエリ (?mode=pomodoro) または URLハッシュ (#pomodoro) からモードを取得
   const urlParams = new URLSearchParams(window.location.search);
   const paramMode = urlParams.get('mode');
   const hashMode = window.location.hash.replace('#', '');
 
-  // 2. 優先順位: URLパラメータ > URLハッシュ > localStorage > デフォルト('timer')
   const initialMode = [paramMode, hashMode, config.currentMode].find(
     m => ['timer', 'stopwatch', 'pomodoro'].includes(m)
   ) || 'timer';
