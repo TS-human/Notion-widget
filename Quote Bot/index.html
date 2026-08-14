@@ -4,25 +4,143 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notion Quote Widget</title>
-  <style>
-    /* Notion公式風のカラー変数定義 */
-    :root {
-      --bg-color: #ffffff;
-      --text-color: rgba(55, 53, 47, 0.85);
-      --sub-color: rgba(55, 53, 47, 0.45);
-      --border-color: rgba(55, 53, 47, 0.12);
-      --btn-hover: rgba(55, 53, 47, 0.08);
-    }
 
-    /* Notionダークモード対応 */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-color: #191919;
-        --text-color: rgba(255, 255, 255, 0.81);
-        --sub-color: rgba(255, 255, 255, 0.45);
-        --border-color: rgba(255, 255, 255, 0.13);
-        --btn-hover: rgba(255, 255, 255, 0.1);
+  <!-- =================================================== -->
+  <!-- ★ 名言のカスタマイズ（ここを自由に編集・追加してください） -->
+  <!-- =================================================== -->
+  <script>
+    const quotes = [
+      {
+        text: "今日という日は、残りの人生の最初の1日である。",
+        author: "チャールズ・ディードリッヒ"
+      },
+      {
+        text: "あなたの時間は限られている。だから他人の人生を歩んで無駄にしてはいけない。",
+        author: "スティーブ・ジョブズ"
+      },
+      {
+        text: "私は失敗したことがない。ただ、1万通りのうまくいかない方法を見つけただけだ。",
+        author: "トーマス・エジソン"
+      },
+      {
+        text: "最大のリスクは、リスクを取らないことだ。",
+        author: "マーク・ザッカーバーグ"
+      },
+      {
+        text: "優秀さとは行為ではなく、習慣である。",
+        author: "アリストテレス"
+      },
+      {
+        text: "私は何度も何度も失敗した。だからこそ、成功したんだ。",
+        author: "マイケル・ジョーダン"
+      },
+      {
+        text: "心が変われば行動が変わる。行動が変われば習慣が変わる。習慣が変われば人格が変わる。人格が変われば運命が変わる。",
+        author: "ウィリアム・ジェームズ"
+      },
+      {
+        text: "一度も失敗したことがない人は、一度も新しいことに挑戦したことがない人だ。",
+        author: "アルベルト・アインシュタイン"
+      },
+      {
+        text: "過ちて改めざる、これを過ちという。",
+        author: "孔子"
+      },
+      {
+        text: "知は力なり。",
+        author: "フランシス・ベーコン"
+      },
+      {
+        text: "最も強い者が生き残るのではなく、最も賢い者が生き延びるのでもない。唯一生き残るのは、変化できる者である。",
+        author: "チャールズ・ダーウィン"
+      },
+      {
+        text: "天才とは、1％のひらめきと99％の努力である。",
+        author: "トーマス・エジソン"
+      },
+      {
+        text: "計画のない目標は、ただの願い事にすぎない。",
+        author: "サン＝テグジュペリ"
+      },
+      {
+        text: "チャンスに出会わない人間は一人もない。それをチャンスにできなかっただけである。",
+        author: "アンドリュー・カーネギー"
+      },
+      {
+        text: "行動は必ずしも幸せをもたらさないかもしれないが、行動のないところに幸せはない。",
+        author: "ベンジャミン・ディズレーリ"
+      },
+      {
+        text: "あなたが『できる』と思おうが『できない』と思おうが、どちらも正しい。",
+        author: "ヘンリー・フォード"
+      },
+      {
+        text: "それはいつも不可能なように思える。誰かがそれを成し遂げるまでは。",
+        author: "ネルソン・マンデラ"
+      },
+      {
+        text: "朝起きてから夜寝るまでの間に自分の好きなことができれば、その人は成功者だ。",
+        author: "ボブ・ディラン"
+      },
+      {
+        text: "木を倒すのに6時間与えられたら、私は最初の4時間を斧を研ぐことに使う。",
+        author: "エイブラハム・リンカーン"
+      },
+      {
+        text: "止まりさえしなければ、どんなにゆっくり進んでも問題ない。",
+        author: "孔子"
+      },
+      {
+        text: "私は10,000通りの蹴りを1回練習した者を恐れない。だが、1つの蹴りを10,000回練習した者を恐れる。",
+        author: "ブルース・リー"
+      },
+      {
+        text: "完璧は善の敵である。",
+        author: "ヴォルテール"
+      },
+      {
+        text: "不安や疑問は恐怖を生み、行動は自信と勇気を生む。",
+        author: "デール・カーネギー"
+      },
+      {
+        text: "未来は、あなたが今日何をするかによって決まる。",
+        author: "マハトマ・ガンジー"
+      },
+      {
+        text: "自分にコントロールできることだけに集中し、コントロールできないものは手放せ。",
+        author: "エピクテトス"
+      },
+      {
+        text: "時間を浪費するな。常に何か益のあることに使え。",
+        author: "ベンジャミン・フランクリン"
+      },
+      {
+        text: "何をするかと同じくらい、何をしないかを決めることが重要だ。",
+        author: "スティーブ・ジョブズ"
+      },
+      {
+        text: "飛べないなら走れ。走れないなら歩け。歩けないなら這え。とにかく前進し続けろ。",
+        author: "マーティン・ルーサー・キング・ジュニア"
+      },
+      {
+        text: "配られたカードで勝負するしかないのさ、それがどんなカードであってもね。",
+        author: "チャールズ・シュルツ"
+      },
+      {
+        text: "小さなことを積み重ねることが、とんでもないところへ行く唯一の道。",
+        author: "イチロー"
       }
+    ];
+  </script>
+
+  <style>
+    :root {
+      --bg-color: #191919;
+      --card-bg: #222222;
+      --text-main: #e3e3e3;
+      --text-sub: #9b9b9b;
+      --border-color: #2f2f2f;
+      --hover-bg: #2c2c2c;
     }
 
     * {
@@ -32,118 +150,111 @@
     }
 
     body {
-      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background-color: transparent;
-      color: var(--text-color);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      padding: 8px;
+      padding: 12px;
     }
 
-    /* Notion風のカードデザイン */
-    .card {
-      background-color: var(--bg-color);
+    .quote-card {
+      background-color: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 16px 20px;
+      border-radius: 12px;
+      padding: 20px 24px;
       width: 100%;
-      max-width: 520px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      transition: background-color 0.2s, border-color 0.2s;
+      gap: 16px;
     }
 
-    .quote-text {
-      font-size: 0.92rem;
+    .quote-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quote-content {
+      font-size: 1rem;
       line-height: 1.6;
       font-weight: 400;
-      letter-spacing: -0.01em;
+      letter-spacing: 0.02em;
+      word-break: normal;
+      line-break: strict;
+      overflow-wrap: break-word;
     }
 
-    .quote-footer {
+    .quote-author {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      font-style: italic;
+      text-align: left;
+      padding-left: 8px;
+    }
+
+    .footer {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 4px;
-    }
-
-    .author {
-      font-size: 0.78rem;
-      color: var(--sub-color);
+      justify-content: flex-end;
     }
 
     .refresh-btn {
-      background: none;
-      border: none;
-      color: var(--sub-color);
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-sub);
+      padding: 6px 14px;
+      border-radius: 6px;
       font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 4px;
-      transition: background-color 0.2s, color 0.2s;
+      gap: 6px;
     }
 
     .refresh-btn:hover {
-      background-color: var(--btn-hover);
-      color: var(--text-color);
-    }
-
-    .refresh-btn svg {
-      width: 12px;
-      height: 12px;
-      fill: currentColor;
+      background-color: var(--hover-bg);
+      color: var(--text-main);
+      border-color: #444;
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div class="quote-text" id="quote"></div>
-    <div class="quote-footer">
-      <span class="author" id="author"></span>
-      <button class="refresh-btn" onclick="nextQuote()">
-        <svg viewBox="0 0 16 16">
-          <path d="M13.65 2.35A7.958 7.958 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.84 0 7.08-2.71 7.85-6.33h-2.07A5.992 5.992 0 0 1 8 14c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z"/>
-        </svg>
-        次へ
+  <div class="quote-card">
+    <div class="quote-group">
+      <div class="quote-content" id="quoteText">読み込み中...</div>
+      <div class="quote-author" id="quoteAuthor"></div>
+    </div>
+    <div class="footer">
+      <button class="refresh-btn" onclick="showRandomQuote()">
+        <span>↻ 次の名言</span>
       </button>
     </div>
   </div>
 
   <script>
-    // お好みの名言をここに追加・編集できます
-    const quotes = [
-      { text: "成功とは、失敗から失敗へと熱意を失わずに進むことである。", author: "ウィンストン・チャーチル" },
-      { text: "未来を予測する最良の方法は、それを発明することだ。", author: "アラン・ケイ" },
-      { text: "小さなことを積み重ねることが、とんでもないところへ行く唯一の道。", author: "イチロー" },
-      { text: "思考が変われば、言葉が変わる。言葉が変われば、行動が変わる。", author: "マザー・テレサ" },
-      { text: "シンプルであることは、究極の洗練である。", author: "レオナルド・ダ・ヴィンチ" },
-      { text: "今日という日は、残りの人生の最初の一日である。", author: "チャールズ・ディードリッヒ" },
-      { text: "自分自身になれ。他の誰かはすでに取られている。", author: "オスカー・ワイルド" }
-    ];
+    let lastIndex = -1;
 
-    let current = -1;
+    function showRandomQuote() {
+      if (!quotes || quotes.length === 0) return;
 
-    function nextQuote() {
-      let next;
+      let randomIndex;
       do {
-        next = Math.floor(Math.random() * quotes.length);
-      } while (next === current && quotes.length > 1);
-      
-      current = next;
-      const q = quotes[current];
-      
-      document.getElementById('quote').textContent = `「${q.text}」`;
-      document.getElementById('author').textContent = `— ${q.author}`;
+        randomIndex = Math.floor(Math.random() * quotes.length);
+      } while (randomIndex === lastIndex && quotes.length > 1);
+
+      lastIndex = randomIndex;
+      const selected = quotes[randomIndex];
+
+      document.getElementById("quoteText").innerText = selected.text;
+      document.getElementById("quoteAuthor").innerText = selected.author ? `— ${selected.author}` : "";
     }
 
-    nextQuote();
+    showRandomQuote();
   </script>
 
 </body>
