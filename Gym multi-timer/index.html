@@ -86,40 +86,6 @@
       display: none !important;
     }
 
-    /* --- ドラッグ可能な浮遊ミニ（ポップアップ）モード --- */
-    .widget-container.is-mini {
-      position: fixed !important;
-      width: 170px !important;
-      padding: 8px 10px !important;
-      z-index: 999999 !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-      border-radius: 12px;
-      cursor: grab;
-      touch-action: none; /* スマホでのスクロール干渉防止 */
-    }
-    .widget-container.is-mini:active {
-      cursor: grabbing;
-    }
-    .widget-container.is-mini .tabs,
-    .widget-container.is-mini #timer-presets-section,
-    .widget-container.is-mini #interval-presets-section,
-    .widget-container.is-mini .preset-section-title,
-    .widget-container.is-mini .shortcuts-hint {
-      display: none !important;
-    }
-    .widget-container.is-mini .display {
-      font-size: 28px !important;
-      margin: 2px 0 6px !important;
-    }
-    .widget-container.is-mini .controls {
-      gap: 4px;
-    }
-    .widget-container.is-mini .main-btn,
-    .widget-container.is-mini .sub-btn {
-      padding: 6px 2px !important;
-      font-size: 11px !important;
-    }
-
     .widget-container.stage-prep {
       background-color: #dcfce7;
       border-color: #86efac;
@@ -430,15 +396,6 @@
       display: block;
       font-weight: 600;
     }
-    .checkbox-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-color);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-    }
     select, input[type="text"], input[type="number"], textarea, input[type="range"] {
       width: 100%;
       padding: 6px;
@@ -499,7 +456,6 @@
   <div class="header-bar">
     <div class="header-top">
       <div class="header-actions">
-        <button class="icon-btn" onclick="toggleMini(event)" title="ミニ表示（ドラッグ移動可）">🗗</button>
         <button class="icon-btn" onclick="toggleExpand(event)" title="拡大/全画面">⛶</button>
         <button class="icon-btn" onclick="toggleSettings(event)" title="設定">⚙️</button>
       </div>
@@ -596,14 +552,6 @@
       <textarea id="interval-presets-input" placeholder="タバタ, 0:05, 0:20, 0:10, 8&#10;筋トレ自重, 0:10, 0:45, 0:15, 4" onfocus="selectInputText(this)"></textarea>
     </div>
 
-    <div class="setting-group" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 12px;">
-      <label class="checkbox-label">
-        <input type="checkbox" id="notification-toggle" onchange="toggleNotificationPermission(this.checked)">
-        <span>🔔 デスクトップ通知を有効化</span>
-      </label>
-      <div id="notification-status-text" style="font-size: 9px; color: var(--sub-text); margin-top: 2px;"></div>
-    </div>
-
     <div class="audio-settings-section">
       <div class="preset-section-title" style="font-size:11px; margin-bottom:8px; color:var(--text-color);">📁 効果音ファイル選択</div>
 
@@ -669,7 +617,6 @@
 
   let config = {
     volume: 0.8,
-    enableNotification: false,
     timerPresets: ["0:30", "1:00", "3:00", "5:00", "10:00", "15:00"],
     intervalPresets: [
       { name: 'タバタ', prep: "0:05", work: "0:20", rest: "0:10", sets: 8 },
@@ -685,74 +632,10 @@
     }
   };
 
-  // --- ドラッグ移動機能の実装 ---
   const widgetContainer = document.getElementById('widget-container');
-  let isDragging = false;
-  let dragOffsetX = 0;
-  let dragOffsetY = 0;
-
-  function initDragEvents() {
-    widgetContainer.addEventListener('mousedown', startDrag);
-    window.addEventListener('mousemove', onDrag);
-    window.addEventListener('mouseup', stopDrag);
-
-    widgetContainer.addEventListener('touchstart', startDrag, { passive: false });
-    window.addEventListener('touchmove', onDrag, { passive: false });
-    window.addEventListener('touchend', stopDrag);
-  }
-
-  function startDrag(e) {
-    if (!widgetContainer.classList.contains('is-mini')) return;
-    // ボタンやインプット、モーダルをクリックした場合はドラッグを開始しない
-    if (e.target.closest('button, input, textarea, .edit-modal-card')) return;
-
-    isDragging = true;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const rect = widgetContainer.getBoundingClientRect();
-
-    dragOffsetX = clientX - rect.left;
-    dragOffsetY = clientY - rect.top;
-
-    e.preventDefault();
-  }
-
-  function onDrag(e) {
-    if (!isDragging || !widgetContainer.classList.contains('is-mini')) return;
-
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-    let newLeft = clientX - dragOffsetX;
-    let newTop = clientY - dragOffsetY;
-
-    // 画面外（ウィンドウ境界）に飛び出さないようクランプ制限
-    const winWidth = window.innerWidth;
-    const winHeight = window.innerHeight;
-    const rect = widgetContainer.getBoundingClientRect();
-
-    newLeft = Math.max(10, Math.min(newLeft, winWidth - rect.width - 10));
-    newTop = Math.max(10, Math.min(newTop, winHeight - rect.height - 10));
-
-    widgetContainer.style.left = `${newLeft}px`;
-    widgetContainer.style.top = `${newTop}px`;
-    widgetContainer.style.right = 'auto';
-    widgetContainer.style.bottom = 'auto';
-
-    e.preventDefault();
-  }
-
-  function stopDrag() {
-    isDragging = false;
-  }
 
   function toggleExpand(e) {
     if (e) e.stopPropagation();
-    if (widgetContainer.classList.contains('is-mini')) {
-      widgetContainer.classList.remove('is-mini');
-      resetWidgetPosition();
-    }
-    
     const isExpanded = widgetContainer.classList.toggle('is-expanded');
     
     if (isExpanded) {
@@ -765,37 +648,6 @@
       }
     }
     updateUI();
-  }
-
-  function toggleMini(e) {
-    if (e) e.stopPropagation();
-    if (widgetContainer.classList.contains('is-expanded')) {
-      widgetContainer.classList.remove('is-expanded');
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-    }
-
-    const isMini = widgetContainer.classList.toggle('is-mini');
-    if (isMini) {
-      // ミニモード化時、画面右下に初期配置（移動可能）
-      const winWidth = window.innerWidth;
-      const winHeight = window.innerHeight;
-      widgetContainer.style.left = `${Math.max(10, winWidth - 190)}px`;
-      widgetContainer.style.top = `${Math.max(10, winHeight - 120)}px`;
-      widgetContainer.style.right = 'auto';
-      widgetContainer.style.bottom = 'auto';
-    } else {
-      resetWidgetPosition();
-    }
-    updateUI();
-  }
-
-  function resetWidgetPosition() {
-    widgetContainer.style.left = '';
-    widgetContainer.style.top = '';
-    widgetContainer.style.right = '';
-    widgetContainer.style.bottom = '';
   }
 
   function initAudioContext() {
@@ -862,52 +714,6 @@
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return s === 0 ? `${m}分` : `${m}分${s}秒`;
-  }
-
-  function sendDesktopNotification(title, body) {
-    if (!config.enableNotification) return;
-    if ("Notification" in window && Notification.permission === "granted") {
-      try {
-        new Notification(title, { body: body, icon: "⏱️" });
-      } catch (e) {}
-    }
-  }
-
-  function toggleNotificationPermission(enabled) {
-    config.enableNotification = enabled;
-    const statusEl = document.getElementById('notification-status-text');
-
-    if (enabled) {
-      if (!("Notification" in window)) {
-        statusEl.textContent = "※このブラウザは通知をサポートしていません。";
-        config.enableNotification = false;
-        document.getElementById('notification-toggle').checked = false;
-        return;
-      }
-      if (Notification.permission === "default") {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            statusEl.textContent = "✓ デスクトップ通知が有効です";
-          } else {
-            statusEl.textContent = "※通知の許可が拒否されました";
-            config.enableNotification = false;
-            document.getElementById('notification-toggle').checked = false;
-          }
-          saveConfigToStorage();
-        });
-        return;
-      } else if (Notification.permission === "denied") {
-        statusEl.textContent = "※ブラウザ設定で通知がブロックされています";
-        config.enableNotification = false;
-        document.getElementById('notification-toggle').checked = false;
-        return;
-      } else {
-        statusEl.textContent = "✓ デスクトップ通知が有効です";
-      }
-    } else {
-      statusEl.textContent = "通知は無効です";
-    }
-    saveConfigToStorage();
   }
 
   function triggerFlash() {
@@ -1064,12 +870,6 @@
     const volPct = Math.round((config.volume ?? 0.8) * 100);
     document.getElementById('volume-slider').value = volPct;
     document.getElementById('vol-value-text').textContent = `${volPct}%`;
-
-    const notifyToggle = document.getElementById('notification-toggle');
-    notifyToggle.checked = !!config.enableNotification;
-    if (config.enableNotification && "Notification" in window) {
-      document.getElementById('notification-status-text').textContent = Notification.permission === 'granted' ? "✓ デスクトップ通知が有効です" : "";
-    }
 
     document.getElementById('preset-input').value = (config.timerPresets || []).join(', ');
     const intervalLines = (config.intervalPresets || []).map(p => `${p.name},${p.prep || '0:05'},${p.work},${p.rest},${p.sets}`).join('\n');
@@ -1325,7 +1125,6 @@
         widgetContainer.classList.add('stage-rest');
       }
 
-      /* 拡大表示時のみ運動中のボタン非表示制御 */
       if (isExpanded) {
         resetBtn.classList.add('hidden');
         if (state.isRunning) {
@@ -1390,7 +1189,7 @@
         state.time = state.prepSec;
       } else {
         state.stage = 'work';
-        state.time = state.workSec;
+        state.time = st.workSec;
       }
     }
     updateUI();
@@ -1409,7 +1208,6 @@
         st.time = 0;
         st.isRunning = false;
         triggerSound('finish');
-        sendDesktopNotification("インターバル完了！", "すべてのセットが終了しました。お疲れ様でした！");
       } else if (st.restSec > 0) {
         st.stage = 'rest';
         st.time = st.restSec;
@@ -1448,7 +1246,6 @@
         updateUI();
         modesState.timer.isRunning = false;
         triggerSound('timer');
-        sendDesktopNotification("タイマー終了", "設定した時間が経過しました。");
         modesState.timer.time = modesState.timer.initialTime;
       }
     }
@@ -1473,7 +1270,6 @@
     updateUI();
   }, 1000);
 
-  initDragEvents();
   loadConfig();
   switchMode(currentMode);
 </script>
