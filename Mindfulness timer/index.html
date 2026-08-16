@@ -318,13 +318,13 @@
       </button>
     </div>
 
-    <!-- 音量 -->
+    <!-- 音量 (最大音量を200%に変更) -->
     <div class="setting-group">
       <div class="setting-label" style="display:flex; justify-content:space-between;">
         <span>通知音量</span>
         <span id="vol-value-text">80%</span>
       </div>
-      <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="onVolumeChange(this.value)">
+      <input type="range" id="volume-slider" min="0" max="200" value="80" oninput="onVolumeChange(this.value)">
     </div>
 
     <!-- 中間音（インターバル音）設定 -->
@@ -434,7 +434,7 @@
   function playGongSound() {
     triggerFlash();
     if (audio.src && audio.src.startsWith('data:audio')) {
-      audio.volume = config.volume;
+      audio.volume = Math.min(1, config.volume);
       audio.currentTime = 0;
       audio.play().catch(() => playBowlTone());
       return;
@@ -470,7 +470,7 @@
   // 中間音再生処理
   function playIntervalTone() {
     if (intervalAudio.src && intervalAudio.src.startsWith('data:audio')) {
-      intervalAudio.volume = config.volume;
+      intervalAudio.volume = Math.min(1, config.volume);
       intervalAudio.currentTime = 0;
       intervalAudio.play().catch(() => playDefaultIntervalTone());
       return;
@@ -639,8 +639,8 @@
   function onVolumeChange(val) {
     config.volume = parseFloat(val) / 100;
     document.getElementById('vol-value-text').textContent = `${val}%`;
-    audio.volume = config.volume;
-    intervalAudio.volume = config.volume;
+    audio.volume = Math.min(1, config.volume);
+    intervalAudio.volume = Math.min(1, config.volume);
   }
 
   function toggleSettings() {
