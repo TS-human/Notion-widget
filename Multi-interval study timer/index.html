@@ -101,27 +101,6 @@
     }
     .icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 
-    .pomo-total-bar {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      margin-top: 2px;
-      margin-bottom: 2px;
-    }
-    .session-badge {
-      font-size: 11px;
-      font-weight: bold;
-      color: var(--accent-color);
-      background: rgba(46, 170, 220, 0.12);
-      padding: 3px 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.15s;
-    }
-    .session-badge:hover {
-      background: rgba(46, 170, 220, 0.22);
-    }
-
     .display {
       font-size: 42px;
       font-weight: 700;
@@ -365,10 +344,6 @@
     <button class="icon-btn" onclick="toggleSettings()" title="設定">⚙️</button>
   </div>
 
-  <div id="pomo-total-bar" class="pomo-total-bar hidden">
-    <span class="session-badge" id="session-count-badge" onclick="resetPomoCount()" title="クリックで累計作業時間をリセット">🍅 <span id="pomo-count-val">0分</span></span>
-  </div>
-
   <div class="display" id="time-display">
     <span class="display-part" id="time-display-min" onclick="enableDisplayEdit('min')" title="クリックして『分』を編集">05</span>
     <span class="display-colon">:</span>
@@ -488,7 +463,6 @@
     currentMode: 'timer',
     volume: 0.8,
     enableNotification: true,
-    pomoTotalSec: 0,
     sounds: { timer: '', pomodoro: '' },
     timerPresets: ["0:30", "1:00", "3:00", "5:00", "10:00", "15:00"],
     pomoPresets: [
@@ -529,14 +503,6 @@
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return s === 0 ? `${m}分` : `${m}分${s}秒`;
-  }
-
-  function formatPomoTime(totalSec) {
-    const mins = Math.floor(totalSec / 60);
-    if (mins < 60) return `${mins}分`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m === 0 ? `${h}時間` : `${h}時間${m}分`;
   }
 
   function triggerFlash() {
@@ -675,12 +641,6 @@
     Object.values(audioElements).forEach(a => a.volume = Math.min(1, config.volume));
   }
 
-  function resetPomoCount() {
-    config.pomoTotalSec = 0;
-    document.getElementById('pomo-count-val').textContent = '0分';
-    saveConfigToStorage();
-  }
-
   function loadConfig() {
     try {
       const saved = localStorage.getItem('notion_multi_timer_config_v13');
@@ -697,7 +657,6 @@
     const volPct = Math.round((config.volume ?? 0.8) * 100);
     document.getElementById('volume-slider').value = volPct;
     document.getElementById('vol-value-text').textContent = `${volPct}%`;
-    document.getElementById('pomo-count-val').textContent = formatPomoTime(config.pomoTotalSec || 0);
 
     document.getElementById('preset-input').value = (config.timerPresets || []).join(', ');
     const pomoLines = (config.pomoPresets || []).map(p => `${p.name},${p.work},${p.break}`).join('\n');
@@ -821,7 +780,6 @@
 
     document.getElementById('timer-presets-section').classList.toggle('hidden', mode !== 'timer');
     document.getElementById('pomo-group').classList.toggle('hidden', mode !== 'pomodoro');
-    document.getElementById('pomo-total-bar').classList.toggle('hidden', mode !== 'pomodoro');
 
     updateUI();
   }
@@ -1004,10 +962,6 @@
     } else if (finishedMode === 'pomodoro') {
       playSound('pomodoro');
       if (modesState.pomodoro.stage === 'work') {
-        const workSec = parseTimeToSeconds(config.pomo.work);
-        config.pomoTotalSec = (config.pomoTotalSec || 0) + workSec;
-        document.getElementById('pomo-count-val').textContent = formatPomoTime(config.pomoTotalSec);
-        saveConfigToStorage();
         sendDesktopNotification('🍅 作業時間終了！', 'お疲れ様でした。休憩に入りましょう！');
         document.title = '【☕ 休憩時間】ポモドーロ';
       } else {
